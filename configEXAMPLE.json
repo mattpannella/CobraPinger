@@ -1,0 +1,16 @@
+{
+    "youtubers": [
+        {
+            "name": "Harke",
+            "channel_id": "UC0PnXf8uwYu1bPEmeaosrEA",
+            "system_prompt": "Summarize the content of this youtube video and provide a bulleted summary of the information under 1500 words."
+        },
+        {
+            "name": "The Hidden Fortress",
+            "channel_id": "UCEXcZdMqOCfmFi66hdKJldQ",
+            "system_prompt": "Summarize the content of this youtube video and provide a bulleted summary of the information under 1500 words."
+        }
+    ],
+    "openai_api_key": "REPLACE ME WITH OPENAPI KEY",
+    "discord_webhook_url": "REPLACE ME WITH WEBHOOK URL"
+}
