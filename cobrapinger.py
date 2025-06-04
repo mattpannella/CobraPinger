@@ -76,20 +76,25 @@ def fetch_new_video(rss_feed_url):
     log("No new video found in the RSS feed.")
     return None
 
-def fetch_transcript(video_id):
+def fetch_transcript(video_id, retries=3, delay=2):
     """Fetch the transcript for the given video ID."""
     log(f"Attempting to fetch the transcript for video ID: {video_id}")
-    try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        log("Transcript successfully fetched.")
-        return " ".join([entry['text'] for entry in transcript])
-    except CouldNotRetrieveTranscript:
-        log("Transcript could not be retrieved (subtitles may be disabled).")
-        return None
-    except Exception as e:
-        log(f"An error occurred while fetching the transcript for video ID {video_id}.")
-        log(f"An exception occurred: {traceback.format_exc()}")
-        return None
+    for attempt in range(1, retries + 1):
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            log("Transcript successfully fetched.")
+            return " ".join([entry['text'] for entry in transcript])
+        except CouldNotRetrieveTranscript:
+            log("Transcript could not be retrieved (subtitles may be disabled).")
+            return None
+        except Exception as e:
+            log(f"An error occurred while fetching the transcript for video ID {video_id}.")
+        
+        if attempt < retries:
+            time.sleep(delay)
+
+    print(f"Failed to fetch transcript for video {video_id} after {retries} attempts.")
+    return None
 
 def summarize_text(text, system_prompt, client):
     """Summarize the given text using OpenAI's GPT model."""
