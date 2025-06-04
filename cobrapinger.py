@@ -88,7 +88,7 @@ def fetch_transcript(video_id):
         return None
     except Exception as e:
         log(f"An error occurred while fetching the transcript for video ID {video_id}.")
-        log("An exception occurred:\n%s", traceback.format_exc())
+        log(f"An exception occurred: {traceback.format_exc()}")
         return None
 
 def summarize_text(text, system_prompt, client):
