@@ -85,6 +85,9 @@ def fetch_transcript(video_id):
     except CouldNotRetrieveTranscript:
         log("Transcript could not be retrieved (subtitles may be disabled).")
         return None
+    except:
+        log(f"An error occurred while fetching the transcript for video ID {video_id}.")
+        return None
 
 def summarize_text(text, system_prompt, client):
     """Summarize the given text using OpenAI's GPT model."""
