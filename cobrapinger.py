@@ -106,6 +106,12 @@ def summarize_text(text, system_prompt, client):
         return None
 
 def send_discord_notification(video_url, summary, discord_webhook_url):
+    #if there is no Discord webhook URL, just print the message
+    if not discord_webhook_url:
+        print("Discord Webhook URL not set. Summary:")
+        print(summary)
+        return
+    
     """Send a notification to Discord with the video URL and summary."""
     log("Sending notification to Discord...")
     message = f"@everyone **New Video:** {video_url}\n\n**Summary:** {summary}"
