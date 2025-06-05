@@ -209,10 +209,20 @@ class DatabaseManager:
             return None
 
     def search_videos(self, query: str, page: int = 1, per_page: int = 10):
-        """Search videos by transcript content."""
+        """Search videos by transcript content with pagination."""
         with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT COUNT(*)
+                FROM transcript_search
+                WHERE transcript_search MATCH ?
+            """, (query,))
+            total_count = cursor.fetchone()[0]
+            
             offset = (page - 1) * per_page
+            
             cursor.execute("""
                 SELECT 
                     v.id,
@@ -220,7 +230,7 @@ class DatabaseManager:
                     v.title,
                     c.name as channel_name,
                     s.content as summary,
-                    snippet(transcript_search, 0, '[highlight]', '[/highlight]', '...', 50) as context
+                    snippet(transcript_search, 0, '<mark class="bg-warning">', '</mark>', '...', 50) as context
                 FROM transcript_search
                 JOIN video v ON transcript_search.rowid = v.id
                 JOIN channel c ON v.channel_id = c.id
@@ -229,7 +239,12 @@ class DatabaseManager:
                 ORDER BY rank
                 LIMIT ? OFFSET ?
             """, (query, per_page, offset))
-            return cursor.fetchall()
+            
+            return {
+                'results': [dict(row) for row in cursor.fetchall()],
+                'total': total_count,
+                'pages': (total_count + per_page - 1) // per_page
+            }
 
     def get_topic_id(self, topic_name: str) -> int:
         """Get topic ID from database."""

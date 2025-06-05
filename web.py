@@ -53,8 +53,19 @@ def video_detail(video_id):
 def search():
     query = request.args.get('q', '')
     page = request.args.get('page', 1, type=int)
-    results = db.search_videos(query, page=page)
-    return render_template('search.html', results=results, query=query)
+    
+    if not query:
+        return render_template('search.html', results=None)
+        
+    result = db.search_videos(query, page=page)
+    return render_template(
+        'search.html', 
+        results=result['results'],
+        query=query,
+        total=result['total'],
+        pages=result['pages'],
+        current_page=page
+    )
 
 @app.route('/topic/<topic_name>')
 def topic_videos(topic_name):

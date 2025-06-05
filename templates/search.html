@@ -1,38 +1,31 @@
 {% extends "base.html" %}
+{% from 'macros.html' import pagination %}
 
 {% block title %}Search Results - CobraPinger{% endblock %}
 
 {% block content %}
-<h2>Search Results for "{{ query }}"</h2>
-
-<style>
-    .search-highlight {
-        background-color: #fff3cd;
-        padding: 0 2px;
-        border-radius: 2px;
-    }
-</style>
-
-<div class="row">
-    {% for result in results %}
-    <div class="col-md-12 mb-4">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">{{ result[2] }}</h5>
-                <h6 class="card-subtitle mb-2 text-muted">{{ result[3] }}</h6>
-                <p class="card-text">
-                    {{ result[5]|replace('[highlight]', '<span class="search-highlight">')|replace('[/highlight]', '</span>')|safe }}
-                </p>
-                <a href="/video/{{ result[0] }}" class="btn btn-primary">View Video</a>
+<div class="container">
+    {% if query %}
+        <h2>Search Results for "{{ query }}"</h2>
+        {% if total > 0 %}
+            <p class="text-muted">Found {{ total }} results</p>
+            
+            {% for result in results %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a href="/video/{{ result.id }}" class="text-decoration-none">{{ result.title }}</a>
+                    </h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ result.channel_name }}</h6>
+                    <p class="card-text">{{ result.context|safe }}</p>
+                </div>
             </div>
-        </div>
-    </div>
-    {% endfor %}
+            {% endfor %}
+            
+            {{ pagination(pages, current_page, '/search', {'q': query}) }}
+        {% else %}
+            <p>No results found.</p>
+        {% endif %}
+    {% endif %}
 </div>
-
-{% if not results %}
-<div class="alert alert-info">
-    No results found for "{{ query }}"
-</div>
-{% endif %}
 {% endblock %}
