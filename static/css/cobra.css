@@ -357,6 +357,10 @@ mark {
     min-height: 300px; /* Minimum height to match video */
 }
 
+.cobra-gif.cobra-flip img {
+    transform: scaleX(-1);
+}
+
 .latest-video {
     max-width: 1200px;
 }
