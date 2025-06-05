@@ -37,11 +37,16 @@
 
         {% if video.transcript %}
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Transcript</h5>
+                <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#transcriptCollapse" aria-expanded="false" aria-controls="transcriptCollapse">
+                    Show/Hide
+                </button>
             </div>
-            <div class="card-body">
-                {{ video.transcript|nl2br }}
+            <div class="collapse" id="transcriptCollapse">
+                <div class="card-body">
+                    {{ video.transcript|nl2br|safe }}
+                </div>
             </div>
         </div>
         {% endif %}
