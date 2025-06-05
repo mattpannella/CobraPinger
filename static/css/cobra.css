@@ -10,11 +10,13 @@
 body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
+    padding-top: 4.5rem;
 }
 
 .navbar {
     background-color: #000000 !important;
     border-bottom: 1px solid #00ff00;
+    margin-bottom: 0 !important;
 }
 
 .card {
@@ -112,4 +114,301 @@ mark {
 
 .bg-light {
     background-color: #1a1a1a !important;
+}
+
+/* Advanced flame effect for navbar brand */
+.navbar-brand {
+    position: relative;
+    font-weight: bold;
+    color: #00ff00;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+/* Main flame layers */
+.navbar-brand::before,
+.navbar-brand::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(0deg, 
+        #00ff00 10%,
+        #00cc00 20%,
+        #009900 40%,
+        transparent 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* First flame layer */
+.navbar-brand::before {
+    filter: blur(3px);
+    opacity: 0;
+    transform: perspective(100px) translateZ(0);
+    animation: flame1 3s infinite;
+}
+
+/* Second flame layer */
+.navbar-brand::after {
+    filter: blur(2px);
+    opacity: 0;
+    transform: perspective(100px) translateZ(0);
+    animation: flame2 2.5s infinite 0.3s;
+}
+
+/* Additional flame elements */
+.navbar-brand span {
+    position: relative;
+}
+
+.navbar-brand span::before {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(0deg,
+        #00ff00 10%,
+        #004400 40%,
+        transparent 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: blur(1px);
+    opacity: 0;
+    animation: flame3 2s infinite 0.1s;
+}
+
+/* Flame animations */
+@keyframes flame1 {
+    0% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+}
+
+@keyframes flame2 {
+    0% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+    50% {
+        opacity: 0.7;
+    }
+    100% {
+        transform: translateY(-15px);
+        opacity: 0;
+    }
+}
+
+@keyframes flame3 {
+    0% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+    50% {
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+}
+
+/* Tag Cloud Styles */
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    background-color: #1a1a1a;
+    border-radius: 8px;
+    border: 1px solid #2a2a2a;
+    padding: 2rem;
+    min-height: 200px;
+}
+
+.tag-item {
+    position: relative;
+    color: #00ff00;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    background-color: #006600;
+    transition: all 0.3s ease;
+    margin: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.tag-item:hover {
+    color: #00ff00;
+    background-color: #008800;
+    transform: scale(1.1);
+    text-decoration: none;
+}
+
+.topic-count {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 0.1rem 0.5rem;
+    margin-left: 0.5rem;
+    font-size: 0.8rem !important;
+    min-width: 1.5em;
+    text-align: center;
+    opacity: 0.8;
+}
+
+/* Add size-based colors */
+.tag-item[style*="font-size: 3"] {
+    background-color: #008800;
+}
+
+.tag-item[style*="font-size: 2.5"] {
+    background-color: #007700;
+}
+
+.tag-item[style*="font-size: 2"] {
+    background-color: #006600;
+}
+
+.tag-item[style*="font-size: 1.5"] {
+    background-color: #005500;
+}
+
+.tag-item[style*="font-size: 1"] {
+    background-color: #004400;
+}
+
+.card-header[role="button"] {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.card-header[role="button"]:hover {
+    background-color: #2a2a2a;
+}
+
+.card-header[role="button"] .bi-chevron-down {
+    transition: transform 0.2s ease;
+}
+
+.card-header[role="button"][aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+}
+
+.channel-filter {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.filter-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #00ff00;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+.quote-card {
+    border-left: 4px solid #00ff00;
+    background-color: rgba(0, 255, 0, 0.05);
+}
+
+.quote-card blockquote {
+    font-size: 1.1rem;
+    font-style: italic;
+}
+
+.quote-card .blockquote-footer a {
+    color: #00ff00;
+}
+
+.quote-card .blockquote-footer a:hover {
+    color: #00cc00;
+}
+
+.cobra-gif {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.cobra-gif img {
+    height: 100%;
+    width: auto;
+    filter: hue-rotate(120deg);
+    min-height: 300px; /* Minimum height to match video */
+}
+
+.cobra-gif.cobra-flip img {
+    transform: scaleX(-1);
+}
+
+.latest-video {
+    max-width: 1200px;
+}
+
+.video-thumb {
+    height: 300px;
+    object-fit: cover;
+    width: 533px;
+    border-radius: 4px;
+}
+
+.latest-video h4 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    color: #00ff00;
+    max-width: 533px; /* Match thumbnail width */
+}
+
+.latest-video p {
+    text-align: center;
+}
+
+.latest-video .card-body {
+    padding: 2.5rem;
+}
+
+/* Add new styles for clickable card */
+.latest-video-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.latest-video-link:hover {
+    text-decoration: none;
+}
+
+.latest-video-link:hover h4 {
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.summary-preview {
+    max-width: 533px;
+    color: #888;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    margin-top: 0.5rem;
+}
+
+.latest-video-link:hover .summary-preview {
+    color: #999;
 }

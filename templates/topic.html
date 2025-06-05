@@ -28,5 +28,5 @@
     {% endfor %}
 </div>
 
-{{ pagination(pages, current_page, '/topic/' + topic) }}
+{{ pagination(pages, current_page, '/topic/' + topic, total=total) }}
 {% endblock %}

@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import re
 
 class DatabaseManager:
     def __init__(self, db_path: str):
@@ -74,13 +75,26 @@ class DatabaseManager:
             conn.commit()
 
     def store_summary(self, video_id: int, content: str) -> None:
-        """Store video summary in database."""
+        """Store video summary in database and extract quote if present."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
+            
+            #store summary
             cursor.execute(
                 "INSERT INTO summary (video_id, content) VALUES (?, ?)",
                 (video_id, content)
             )
+            
+            #extract and store quote if present
+            pattern = r'\*\*"([^"]+)"\*\*'
+            matches = re.finditer(pattern, content)
+            for match in matches:
+                quote = match.group(1)
+                cursor.execute(
+                    "INSERT INTO quote (video_id, content) VALUES (?, ?)",
+                    (video_id, quote)
+                )
+            
             conn.commit()
 
     def get_or_create_topic(self, topic_name: str) -> int:
@@ -332,3 +346,117 @@ class DatabaseManager:
             """, (date_pattern,))
             
             return [dict(row) for row in cursor.fetchall()]
+
+    def get_videos_without_transcript(self) -> list:
+        """Get all videos that don't have transcripts."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.youtube_id,
+                    v.title,
+                    c.name as channel_name,
+                    c.id as channel_id,
+                    v.youtube_created_at
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                LEFT JOIN transcript t ON v.id = t.video_id
+                WHERE t.content IS NULL
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_videos_without_summary(self) -> list:
+        """Get all videos that have transcripts but no summaries."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.youtube_id,
+                    v.title,
+                    c.name as channel_name,
+                    c.id as channel_id,
+                    c.youtube_id as youtube_channel_id,
+                    v.youtube_created_at,
+                    t.content as transcript
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                JOIN transcript t ON v.id = t.video_id
+                LEFT JOIN summary s ON v.id = s.video_id
+                WHERE s.content IS NULL OR s.video_id IS NULL
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_topic_counts(self):
+        """Get all topics and their video counts."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT t.name, COUNT(vt.video_id) as count
+                FROM topic t
+                LEFT JOIN video_topic vt on t.id = vt.topic_id
+                GROUP BY t.id, t.name
+                ORDER BY count DESC
+            """)
+            return cursor.fetchall()
+
+    def get_video_quote(self, video_id):
+        """Get quote for a specific video."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT content 
+                FROM quote 
+                WHERE video_id = ?
+            ''', (video_id,))
+            result = cursor.fetchone()
+            return result['content'] if result else None
+
+    def get_random_quote(self):
+        """Get a random quote with its video details."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    q.content as quote,
+                    v.id as video_id,
+                    v.title,
+                    c.name as channel_name
+                FROM quote q
+                JOIN video v ON q.video_id = v.id
+                JOIN channel c ON v.channel_id = c.id
+                ORDER BY RANDOM()
+                LIMIT 1
+            """)
+            result = cursor.fetchone()
+            return dict(result) if result else None
+
+    def get_latest_video(self):
+        """Get the most recently published video with all its details."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.title,
+                    v.youtube_id,
+                    v.youtube_created_at,
+                    v.thumbnail_url,
+                    c.name as channel_name,
+                    c.id as channel_id,
+                    s.content as summary
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                LEFT JOIN summary s ON v.id = s.video_id
+                ORDER BY v.youtube_created_at DESC
+                LIMIT 1
+            """)
+            result = cursor.fetchone()
+            return dict(result) if result else None

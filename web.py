@@ -6,6 +6,10 @@ from datetime import datetime
 import calendar
 
 app = Flask(__name__, static_folder='static')
+
+# Add min function to Jinja globals
+app.jinja_env.globals.update(min=min)
+
 db = DatabaseManager('db.sqlite')
 
 @app.template_filter('markdown')
@@ -28,6 +32,15 @@ def nl2br(text):
 
 @app.route('/')
 def index():
+    """Welcome page with latest video and random quote."""
+    quote = db.get_random_quote()
+    latest_video = db.get_latest_video()
+    
+    return render_template('index.html', active_page='home', quote=quote, latest_video=latest_video)
+
+@app.route('/videos')
+def videos():
+    """Video listing page with filters."""
     page = request.args.get('page', 1, type=int)
     selected_channels = request.args.getlist('channels', type=int)
     
@@ -37,15 +50,10 @@ def index():
         channel_ids=selected_channels if selected_channels else None
     )
     
-    return render_template(
-        'index.html', 
-        videos=result['videos'],
-        total=result['total'],
-        pages=result['pages'],
-        current_page=page,
-        channels=channels,
-        selected_channels=selected_channels
-    )
+    # Get random quote
+    quote = db.get_random_quote()
+    
+    return render_template('videos.html', active_page='videos', videos=result['videos'], total=result['total'], pages=result['pages'], current_page=page, channels=channels, selected_channels=selected_channels, quote=quote)
 
 @app.route('/video/<int:video_id>')
 def video_detail(video_id):
@@ -119,18 +127,24 @@ def calendar_view(year=None, month=None):
     next_month = month % 12 + 1
     next_year = year + (1 if month == 12 else 0)
     
-    return render_template(
-        'calendar.html',
-        calendar=cal,
-        video_map=video_map,
-        month=month,
-        month_name=month_name,
-        year=year,
-        prev_month=prev_month,
-        prev_year=prev_year,
-        next_month=next_month,
-        next_year=next_year
-    )
+    return render_template('calendar.html', active_page='calendar', calendar=cal, video_map=video_map, month=month, month_name=month_name, year=year, prev_month=prev_month, prev_year=prev_year, next_month=next_month, next_year=next_year)
+
+@app.route('/topics')
+def topic_cloud():
+    """Show all topics in a tag cloud."""
+    topics = db.get_topic_counts()  # We'll create this method
+    return render_template('topics.html', active_page='topics', topics=topics)
+
+@app.template_filter('formatdate')
+def formatdate(date_str):
+    """Format ISO date string to human readable format."""
+    if not date_str:
+        return ""
+    try:
+        date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        return date.strftime('%B %d, %Y')  # Example: January 1, 2024
+    except ValueError:
+        return date_str
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=9595, debug=True)
