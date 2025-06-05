@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros.html' import pagination %}
 
 {% block title %}Videos tagged "{{ topic }}" - CobraPinger{% endblock %}
 
@@ -27,9 +28,5 @@
     {% endfor %}
 </div>
 
-{% if not videos %}
-<div class="alert alert-info">
-    No videos found with this topic.
-</div>
-{% endif %}
+{{ pagination(pages, current_page, '/topic/' + topic) }}
 {% endblock %}

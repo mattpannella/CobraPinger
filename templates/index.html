@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% from "macros.html" import pagination %}
 {% block title %}CobraPinger - Videos{% endblock %}
 
 {% block head %}
@@ -41,6 +41,7 @@
     </div>
 </div>
 
+{% if videos %}
 <div class="row">
     {% for video in videos %}
     <div class="col-md-6 mb-4">
@@ -65,4 +66,7 @@
     </div>
     {% endfor %}
 </div>
+
+{{ pagination(pages, current_page, '/', {'channels': selected_channels} if selected_channels else {}) }}
+{% endif %}
 {% endblock %}

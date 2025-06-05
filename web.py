@@ -25,14 +25,17 @@ def index():
     selected_channels = request.args.getlist('channels', type=int)
     
     channels = db.get_all_channels()
-    videos = db.get_all_videos(
+    result = db.get_all_videos(
         page=page, 
         channel_ids=selected_channels if selected_channels else None
     )
     
     return render_template(
         'index.html', 
-        videos=videos, 
+        videos=result['videos'],
+        total=result['total'],
+        pages=result['pages'],
+        current_page=page,
         channels=channels,
         selected_channels=selected_channels
     )
@@ -59,8 +62,15 @@ def topic_videos(topic_name):
     if topic_id is None:
         return "Topic not found", 404
         
-    videos = db.get_videos_by_topic(topic_id, page=page)
-    return render_template('topic.html', videos=videos, topic=topic_name)
+    result = db.get_videos_by_topic(topic_id, page=page)
+    return render_template(
+        'topic.html', 
+        videos=result['videos'],
+        total=result['total'],
+        pages=result['pages'],
+        current_page=page,
+        topic=topic_name
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

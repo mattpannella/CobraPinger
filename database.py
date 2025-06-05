@@ -87,7 +87,7 @@ class DatabaseManager:
         """Get topic ID from database or create if not exists."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            # Trim whitespace and convert to lowercase
+
             topic_name = topic_name.lower().strip()
             
             cursor.execute("SELECT id FROM topic WHERE TRIM(name) = ?", (topic_name,))
@@ -118,6 +118,21 @@ class DatabaseManager:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
+            
+            count_query = """
+                SELECT COUNT(*) 
+                FROM video v 
+                JOIN channel c ON v.channel_id = c.id
+            """
+            count_params = []
+            if channel_ids:
+                placeholders = ','.join('?' * len(channel_ids))
+                count_query += f" WHERE v.channel_id IN ({placeholders})"
+                count_params.extend(channel_ids)
+                
+            cursor.execute(count_query, count_params)
+            total_count = cursor.fetchone()[0]
+            
             offset = (page - 1) * per_page
 
             query = """
@@ -145,7 +160,11 @@ class DatabaseManager:
 
             cursor.execute(query, params)
             rows = cursor.fetchall()
-            return [dict(row) for row in rows]
+            return {
+                'videos': [dict(row) for row in rows],
+                'total': total_count,
+                'pages': (total_count + per_page - 1) // per_page
+            }
 
     def get_video_details(self, video_id: int):
         """Get complete details for a single video."""
@@ -168,7 +187,6 @@ class DatabaseManager:
             """, (video_id,))
             video_data = cursor.fetchone()
             
-            # Get topics for the video
             cursor.execute("""
                 SELECT t.name
                 FROM topic t
@@ -229,6 +247,15 @@ class DatabaseManager:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM video v
+                JOIN video_topic vt ON v.id = vt.video_id
+                WHERE vt.topic_id = ?
+            """, (topic_id,))
+            total_count = cursor.fetchone()[0]
+            
             offset = (page - 1) * per_page
             cursor.execute("""
                 SELECT 
@@ -247,7 +274,11 @@ class DatabaseManager:
                 LIMIT ? OFFSET ?
             """, (topic_id, per_page, offset))
             rows = cursor.fetchall()
-            return [dict(row) for row in rows]
+            return {
+                'videos': [dict(row) for row in rows],
+                'total': total_count,
+                'pages': (total_count + per_page - 1) // per_page
+            }
 
     def video_exists(self, youtube_id: str) -> bool:
         """Check if a video already exists in the database."""
