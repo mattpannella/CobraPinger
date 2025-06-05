@@ -10,11 +10,13 @@
 body {
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
+    padding-top: 4.5rem;
 }
 
 .navbar {
     background-color: #000000 !important;
     border-bottom: 1px solid #00ff00;
+    margin-bottom: 0 !important;
 }
 
 .card {
