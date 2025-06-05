@@ -316,3 +316,12 @@ mark {
     max-height: 300px;
     overflow-y: auto;
 }
+
+.filter-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #00ff00;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
