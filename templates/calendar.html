@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Video Calendar - CobraPinger{% endblock %}
+
+{% block content %}
+<div class="container calendar">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="text-center">
+                <a href="/calendar/{{ prev_year }}/{{ prev_month }}" class="btn btn-outline-primary">&laquo;</a>
+                {{ month_name }} {{ year }}
+                <a href="/calendar/{{ next_year }}/{{ next_month }}" class="btn btn-outline-primary">&raquo;</a>
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        {% for day in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] %}
+                        <th class="text-center">{{ day }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in calendar %}
+                    <tr>
+                        {% for day in week %}
+                        <td class="{% if day == 0 %}bg-light{% endif %}" style="height: 120px; width: 14.28%">
+                            {% if day != 0 %}
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">{{ day }}</span>
+                                {% if day in video_map %}
+                                <span class="badge bg-primary">{{ video_map[day]|length }}</span>
+                                {% endif %}
+                            </div>
+                            {% if day in video_map %}
+                            <div class="mt-1" style="max-height: 80px; overflow-y: auto">
+                                {% for video in video_map[day] %}
+                                <a href="/video/{{ video.id }}" class="d-block text-truncate text-decoration-none small">
+                                    {{ video.title }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
