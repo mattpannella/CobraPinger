@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 import calendar
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 db = DatabaseManager('db.sqlite')
 
 @app.template_filter('markdown')

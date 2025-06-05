@@ -1,0 +1,115 @@
+:root {
+    --bs-body-bg: #121212;
+    --bs-body-color: #e0e0e0;
+    --bs-primary: #00ff00;
+    --bs-primary-rgb: 0, 255, 0;
+    --bs-dark: #1a1a1a;
+    --bs-secondary: #2a2a2a;
+}
+
+body {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+.navbar {
+    background-color: #000000 !important;
+    border-bottom: 1px solid #00ff00;
+}
+
+.card {
+    background-color: #1a1a1a;
+    border: 1px solid #2a2a2a;
+}
+
+.card:hover {
+    border-color: #00ff00;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+}
+
+.btn-primary {
+    background-color: #006600;
+    border-color: #00ff00;
+}
+
+.btn-primary:hover {
+    background-color: #008800;
+    border-color: #00ff00;
+}
+
+.badge {
+    background-color: #006600 !important;
+}
+
+.text-muted {
+    color: #888888 !important;
+}
+
+.card-text ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.card-text ul li {
+    margin-bottom: 0.5rem;
+}
+
+mark {
+    background-color: #006600;
+    color: #e0e0e0;
+    padding: 0.1em 0.2em;
+    border-radius: 2px;
+}
+
+.pagination .page-link {
+    background-color: #1a1a1a;
+    border-color: #2a2a2a;
+    color: #00ff00;
+}
+
+.pagination .page-link:hover {
+    background-color: #2a2a2a;
+    border-color: #00ff00;
+}
+
+.pagination .active .page-link {
+    background-color: #006600;
+    border-color: #00ff00;
+}
+
+.calendar a {
+    color: #00ff00;
+    text-decoration: none;
+}
+
+.calendar a:hover {
+    color: #00cc00;
+    text-decoration: underline;
+}
+
+.card a {
+    color: #00ff00;
+    text-decoration: none;
+}
+
+.card a:hover {
+    color: #00cc00;
+    text-decoration: underline;
+}
+
+.form-control {
+    background-color: #2a2a2a;
+    border-color: #333333;
+    color: #e0e0e0;
+}
+
+.form-control:focus {
+    background-color: #333333;
+    border-color: #00ff00;
+    box-shadow: 0 0 0 0.25rem rgba(0, 255, 0, 0.25);
+}
+
+.bg-light {
+    background-color: #1a1a1a !important;
+}
