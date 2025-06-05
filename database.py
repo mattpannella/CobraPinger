@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import re
 
 class DatabaseManager:
     def __init__(self, db_path: str):
@@ -74,13 +75,26 @@ class DatabaseManager:
             conn.commit()
 
     def store_summary(self, video_id: int, content: str) -> None:
-        """Store video summary in database."""
+        """Store video summary in database and extract quote if present."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
+            
+            #store summary
             cursor.execute(
                 "INSERT INTO summary (video_id, content) VALUES (?, ?)",
                 (video_id, content)
             )
+            
+            #extract and store quote if present
+            pattern = r'\*\*"([^"]+)"\*\*'
+            matches = re.finditer(pattern, content)
+            for match in matches:
+                quote = match.group(1)
+                cursor.execute(
+                    "INSERT INTO quote (video_id, content) VALUES (?, ?)",
+                    (video_id, quote)
+                )
+            
             conn.commit()
 
     def get_or_create_topic(self, topic_name: str) -> int:
@@ -384,8 +398,21 @@ class DatabaseManager:
             cursor.execute("""
                 SELECT t.name, COUNT(vt.video_id) as count
                 FROM topic t
-                LEFT JOIN video_topic vt ON t.id = vt.topic_id
+                LEFT JOIN video_topic vt on t.id = vt.topic_id
                 GROUP BY t.id, t.name
                 ORDER BY count DESC
             """)
             return cursor.fetchall()
+
+    def get_video_quote(self, video_id):
+        """Get quote for a specific video."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT content 
+                FROM quote 
+                WHERE video_id = ?
+            ''', (video_id,))
+            result = cursor.fetchone()
+            return result['content'] if result else None
