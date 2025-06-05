@@ -323,7 +323,7 @@ def extract_topics(text: str, client) -> list[str]:
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a topic extraction expert. Extract 3-5 main topics from the given text. Each topic should be a single word or short phrase (max 3 words). Respond with only the topics, one per line, no numbers or bullet points. Examples of good topics: 'AI Ethics', 'Game Design', 'Climate Change', 'Unity Engine', 'Mobile Gaming'."},
+                {"role": "system", "content": "You are a topic extraction expert. Extract 3-5 main topics from the given text. Each topic should be a single word or short phrase (max 3 words). Respond with only the topics, one per line, no numbers or bullet points. Examples of good topics: 'Proscuitto', 'food hacks', 'dark magic', 'gender relations', 'wand making'."},
                 {"role": "user", "content": f"Extract the main topics from this transcript:\n\n{text}"}
             ],
             max_tokens=100,
