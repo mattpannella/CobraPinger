@@ -365,12 +365,13 @@ class DatabaseManager:
                     v.title,
                     c.name as channel_name,
                     c.id as channel_id,
+                    c.youtube_id as youtube_channel_id,
                     v.youtube_created_at,
                     t.content as transcript
                 FROM video v
                 JOIN channel c ON v.channel_id = c.id
                 JOIN transcript t ON v.id = t.video_id
                 LEFT JOIN summary s ON v.id = s.video_id
-                WHERE s.content IS NULL
+                WHERE s.content IS NULL OR s.video_id IS NULL
             """)
             return [dict(row) for row in cursor.fetchall()]

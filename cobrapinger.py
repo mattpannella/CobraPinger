@@ -595,10 +595,10 @@ def reprocess_missing_content(config, client):
                     if summary:
                         db.store_summary(video['id'], summary)
                         log("Summary stored.")
-                
-                log("Video processing complete.")
-            else:
-                log("Could not retrieve transcript.")
+            
+            log("Video processing complete.")
+        else:
+            log("Could not retrieve transcript.")
     
     if videos_no_summary:
         log(f"\nFound {len(videos_no_summary)} videos missing summaries.")
@@ -618,16 +618,32 @@ def reprocess_missing_content(config, client):
             
             # Get channel's system prompt
             channel_config = next(
-                (y for y in config['youtubers'] if y['channel_id'] == str(video['channel_id'])), 
+                (y for y in config['youtubers'] if y['channel_id'] == str(video['youtube_channel_id'])), 
                 None
             )
             
-            if channel_config and channel_config.get('openai_enabled', True):
-                summary = summarize_text(video['transcript'], channel_config['system_prompt'], client)
-                if summary:
-                    db.store_summary(video['id'], summary)
-                    log("Summary stored.")
-            
+            if not channel_config:
+                log(f"No channel config found for {video['channel_name']}, skipping...")
+                continue
+
+            if channel_config.get('openai_enabled', True):
+                if not video.get('transcript'):
+                    log("No transcript available for summary generation.")
+                    continue
+
+                try:
+                    log(f"Sending to OpenAI for summarization...")
+                    summary = summarize_text(video['transcript'], channel_config['system_prompt'], client)
+                    if summary:
+                        db.store_summary(video['id'], summary)
+                        log(f"Summary stored successfully for {video['title']}")
+                    else:
+                        log("OpenAI failed to generate summary")
+                except Exception as e:
+                    log(f"Error generating summary: {str(e)}")
+            else:
+                log(f"OpenAI is disabled for channel {video['channel_name']}")
+                    
     log("Finished reprocessing videos.")
 
 def show_menu():
