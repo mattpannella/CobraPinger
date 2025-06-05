@@ -52,3 +52,7 @@ CREATE TABLE IF NOT EXISTS video_topic (
     FOREIGN KEY (video_id) REFERENCES video(id),
     FOREIGN KEY (topic_id) REFERENCES topic(id)
 );
+
+-- Add unique index for video_topic pairs
+CREATE UNIQUE INDEX IF NOT EXISTS idx_video_topic_unique 
+ON video_topic(video_id, topic_id);
