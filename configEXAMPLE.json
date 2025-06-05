@@ -12,5 +12,7 @@
         }
     ],
     "openai_api_key": "REPLACE ME WITH OPENAPI KEY",
-    "discord_webhook_url": "REPLACE ME WITH WEBHOOK URL"
+    "discord_webhook_url": "REPLACE ME WITH WEBHOOK URL",
+    "db_path": "db.sqlite",
+    "schema_file_path": "schema.sql"
 }
