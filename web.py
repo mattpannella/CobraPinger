@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, jsonify
 from database import DatabaseManager
 import markdown
 import re
+from datetime import datetime
+import calendar
 
 app = Flask(__name__)
 db = DatabaseManager('db.sqlite')
@@ -70,6 +72,48 @@ def topic_videos(topic_name):
         pages=result['pages'],
         current_page=page,
         topic=topic_name
+    )
+
+@app.route('/calendar')
+@app.route('/calendar/<int:year>/<int:month>')
+def calendar_view(year=None, month=None):
+    if year is None:
+        now = datetime.now()
+        year = now.year
+        month = now.month
+        
+    # Get calendar info
+    cal = calendar.monthcalendar(year, month)
+    month_name = calendar.month_name[month]
+    
+    # Get videos for this month
+    videos = db.get_videos_by_date(year, month)
+    
+    # Organize videos by day
+    video_map = {}
+    for video in videos:
+        day = int(video['youtube_created_at'].split('-')[2].split('T')[0])
+        if day not in video_map:
+            video_map[day] = []
+        video_map[day].append(video)
+    
+    # Calculate prev/next months
+    prev_month = (month - 2) % 12 + 1
+    prev_year = year - (1 if month == 1 else 0)
+    next_month = month % 12 + 1
+    next_year = year + (1 if month == 12 else 0)
+    
+    return render_template(
+        'calendar.html',
+        calendar=cal,
+        video_map=video_map,
+        month=month,
+        month_name=month_name,
+        year=year,
+        prev_month=prev_month,
+        prev_year=prev_year,
+        next_month=next_month,
+        next_year=next_year
     )
 
 if __name__ == '__main__':

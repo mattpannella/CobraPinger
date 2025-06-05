@@ -294,3 +294,26 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute("SELECT id, name FROM channel ORDER BY name")
             return [dict(row) for row in cursor.fetchall()]
+
+    def get_videos_by_date(self, year: int, month: int):
+        """Get all videos for a specific month."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # SQLite strftime returns single digit for month, so we pad with 0
+            date_pattern = f"{year}-{month:02d}-%"
+            
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.title,
+                    v.youtube_created_at,
+                    c.name as channel_name
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                WHERE v.youtube_created_at LIKE ?
+                ORDER BY v.youtube_created_at ASC
+            """, (date_pattern,))
+            
+            return [dict(row) for row in cursor.fetchall()]
