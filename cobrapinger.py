@@ -354,7 +354,7 @@ def fetch_videos_from_channel(youtube_api_key: str, channel_id: str, max_results
     try:
         youtube = build('youtube', 'v3', developerKey=youtube_api_key)
         
-        # First get the channel's upload playlist ID
+        #get the channel's upload playlist ID
         channel_response = youtube.channels().list(
             part='contentDetails',
             id=channel_id
@@ -366,7 +366,6 @@ def fetch_videos_from_channel(youtube_api_key: str, channel_id: str, max_results
             
         uploads_playlist_id = channel_response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
         
-        # Then get the videos from that playlist
         videos = []
         next_page_token = None
         
@@ -505,8 +504,8 @@ def show_menu():
         print("6. Toggle OpenAI Summarization for a YouTuber")
         print("7. Configure API Keys")
         print("8. Initialize/Rebuild Database")
-        print("9. Load Recent Videos")  # New option
-        print("10. Exit")  # Updated number
+        print("9. Load Recent Videos")
+        print("10. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":
