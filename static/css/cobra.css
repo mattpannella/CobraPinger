@@ -344,34 +344,43 @@ mark {
     color: #00cc00;
 }
 
-.cobra-gif img {
-    height: 300px;  /* Increased from 250px */
-    width: auto;
-    filter: hue-rotate(120deg);
+.cobra-gif {
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 
-.cobra-flip img {
-    transform: scaleX(-1);
+.cobra-gif img {
+    height: 100%;
+    width: auto;
+    filter: hue-rotate(120deg);
+    min-height: 300px; /* Minimum height to match video */
 }
 
 .latest-video {
-    max-width: 1200px;  /* Increased from 1000px */
+    max-width: 1200px;
 }
 
 .video-thumb {
-    height: 300px;  /* Increased from 250px */
+    height: 300px;
     object-fit: cover;
-    width: 100%;
+    width: 533px;
+    border-radius: 4px;
 }
 
 .latest-video h4 {
-    font-size: 1.8rem;  /* Increased from 1.5rem */
-    margin-bottom: 1rem;
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
     color: #00ff00;
+    max-width: 533px; /* Match thumbnail width */
+}
+
+.latest-video p {
+    text-align: center;
 }
 
 .latest-video .card-body {
-    padding: 2.5rem;  /* Increased from 2rem */
+    padding: 2.5rem;
 }
 
 /* Add new styles for clickable card */
@@ -386,4 +395,16 @@ mark {
 
 .latest-video-link:hover h4 {
     text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.summary-preview {
+    max-width: 533px;
+    color: #888;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    margin-top: 0.5rem;
+}
+
+.latest-video-link:hover .summary-preview {
+    color: #999;
 }

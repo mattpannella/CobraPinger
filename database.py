@@ -450,9 +450,11 @@ class DatabaseManager:
                     v.youtube_created_at,
                     v.thumbnail_url,
                     c.name as channel_name,
-                    c.id as channel_id
+                    c.id as channel_id,
+                    s.content as summary
                 FROM video v
                 JOIN channel c ON v.channel_id = c.id
+                LEFT JOIN summary s ON v.id = s.video_id
                 ORDER BY v.youtube_created_at DESC
                 LIMIT 1
             """)
