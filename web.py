@@ -12,7 +12,12 @@ db = DatabaseManager('db.sqlite')
 def markdown_filter(text):
     if not text:
         return ""
-    return markdown.markdown(text)
+    return markdown.markdown(text, extensions=[
+        'markdown.extensions.fenced_code',
+        'markdown.extensions.tables',
+        'markdown.extensions.nl2br',
+        'markdown.extensions.sane_lists'
+    ])
 
 @app.template_filter('nl2br')
 def nl2br(text):
