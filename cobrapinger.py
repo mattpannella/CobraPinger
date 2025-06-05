@@ -9,6 +9,8 @@ import pyfiglet
 import sys
 import select
 import re
+import traceback
+from database import DatabaseManager
 
 CONFIG_FILE = "config.json"
 
@@ -75,16 +77,25 @@ def fetch_new_video(rss_feed_url):
     log("No new video found in the RSS feed.")
     return None
 
-def fetch_transcript(video_id):
+def fetch_transcript(video_id, retries=3, delay=2):
     """Fetch the transcript for the given video ID."""
     log(f"Attempting to fetch the transcript for video ID: {video_id}")
-    try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        log("Transcript successfully fetched.")
-        return " ".join([entry['text'] for entry in transcript])
-    except CouldNotRetrieveTranscript:
-        log("Transcript could not be retrieved (subtitles may be disabled).")
-        return None
+    for attempt in range(1, retries + 1):
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            log("Transcript successfully fetched.")
+            return " ".join([entry['text'] for entry in transcript])
+        except CouldNotRetrieveTranscript:
+            log("Transcript could not be retrieved (subtitles may be disabled).")
+            return None
+        except Exception as e:
+            log(f"An error occurred while fetching the transcript for video ID {video_id}.")
+        
+        if attempt < retries:
+            time.sleep(delay)
+
+    print(f"Failed to fetch transcript for video {video_id} after {retries} attempts.")
+    return None
 
 def summarize_text(text, system_prompt, client):
     """Summarize the given text using OpenAI's GPT model."""
@@ -106,6 +117,12 @@ def summarize_text(text, system_prompt, client):
         return None
 
 def send_discord_notification(video_url, summary, discord_webhook_url):
+    #if there is no Discord webhook URL, just print the message
+    if not discord_webhook_url:
+        print("Discord Webhook URL not set. Summary:")
+        print(summary)
+        return
+    
     """Send a notification to Discord with the video URL and summary."""
     log("Sending notification to Discord...")
     message = f"@everyone **New Video:** {video_url}\n\n**Summary:** {summary}"
@@ -118,10 +135,13 @@ def send_discord_notification(video_url, summary, discord_webhook_url):
 
 def run_program_once(config, client):
     """Run the program once."""
+    db = DatabaseManager(config['db_path'])
+    
     for youtuber in config['youtubers']:
         log(f"Checking for new videos for {youtuber['name']}...")
         last_video_data = load_last_video_data(youtuber['name'])
         new_video = fetch_new_video(f"https://www.youtube.com/feeds/videos.xml?channel_id={youtuber['channel_id']}")
+        
         if new_video:
             video_id = new_video.yt_videoid
             video_title = new_video.title
@@ -129,20 +149,37 @@ def run_program_once(config, client):
 
             if not any(video['id'] == video_id for video in last_video_data):
                 log(f"New video detected with ID: {video_id}")
+                
+                # Store channel and video in database
+                channel_id = db.get_or_create_channel(youtuber['channel_id'], youtuber['name'])
+                db_video_id = db.store_video(video_id, channel_id, video_title)
+                
+                # Handle transcript
                 transcript = fetch_transcript(video_id)
                 if transcript:
                     save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
+                    db.store_transcript(db_video_id, transcript)
                     
-                    # Check if OpenAI is enabled for this YouTuber
+                    # Extract and store topics
+                    topics = extract_topics(transcript, client)
+                    topic_ids = []
+                    for topic in topics:
+                        topic_id = db.get_or_create_topic(topic)
+                        topic_ids.append(topic_id)
+                    db.link_video_topics(db_video_id, topic_ids)
+                    log(f"Stored {len(topics)} topics for video")
+
+                    # Handle summary
                     if youtuber.get('openai_enabled', True):
                         summary = summarize_text(transcript, youtuber['system_prompt'], client)
-                        if not summary:
+                        if summary:
+                            db.store_summary(db_video_id, summary)
+                        else:
                             summary = "No summary available."
                     else:
                         summary = "OpenAI functionality is disabled for this YouTuber."
-
                 else:
-                   summary = "No transcript found."
+                    summary = "No transcript found."
 
                 send_discord_notification(new_video.link, summary, config['discord_webhook_url'])
 
@@ -151,7 +188,7 @@ def run_program_once(config, client):
                     'title': video_title,
                     'published': video_published
                 })
-                if len(last_video_data) > 5:  # Keep only the last 5 videos
+                if len(last_video_data) > 5:
                     last_video_data.pop(0)
 
                 save_last_video_data(youtuber['name'], last_video_data)
@@ -279,13 +316,33 @@ def display_logo():
     ascii_art = pyfiglet.figlet_format("COBRAPINGER", font="slant")
     print(ascii_art)
 
+def extract_topics(text: str, client) -> list[str]:
+    """Extract topics from text using OpenAI."""
+    log("Sending transcript to OpenAI to generate topics list")
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a topic extraction expert. Extract 3-5 main topics from the given text. Each topic should be a single word or short phrase (max 3 words). Respond with only the topics, one per line, no numbers or bullet points. Examples of good topics: 'AI Ethics', 'Game Design', 'Climate Change', 'Unity Engine', 'Mobile Gaming'."},
+                {"role": "user", "content": f"Extract the main topics from this transcript:\n\n{text}"}
+            ],
+            max_tokens=100,
+            temperature=0.3,
+        )
+        topics = response.choices[0].message.content.strip().split('\n')
+        log(f"Extracted {len(topics)} topics")
+        return topics
+    except Exception as e:
+        log(f"Could not extract topics: {e}")
+        return []
+
 def show_menu():
     """Show the main menu."""
     config = load_config()
     openai.api_key = config['openai_api_key']
 
     while True:
-    # Display the COBRAPINGER logo each time the menu is shown
+        # Display the COBRAPINGER logo each time the menu is shown
         display_logo()
         print("\n--- YouTube Monitor Menu ---")
         print("1. Run Program Once")
@@ -293,9 +350,10 @@ def show_menu():
         print("3. List YouTubers Being Tracked")
         print("4. Add New YouTuber")
         print("5. Remove YouTuber")
-        print("6. Toggle OpenAI Summarization for a YouTuber")  # New menu option
+        print("6. Toggle OpenAI Summarization for a YouTuber")
         print("7. Configure API Keys")
-        print("8. Exit")
+        print("8. Initialize/Rebuild Database")
+        print("9. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -309,13 +367,19 @@ def show_menu():
         elif choice == "5":
             remove_youtuber(config)
         elif choice == "6":
-            toggle_openai_for_youtuber(config)  # New function call
+            toggle_openai_for_youtuber(config)
         elif choice == "7":
             configure_api_keys(config)
         elif choice == "8":
+            db = DatabaseManager(config['db_path'])
+            db.create_database()
+            db.build_schema(config['schema_file_path'])
+            log("Database initialized successfully.")
+        elif choice == "9":
             break
         else:
             print("Invalid choice. Please try again.")
+
 
 if __name__ == "__main__":
     import sys
@@ -326,4 +390,3 @@ if __name__ == "__main__":
         run_program_continuously(config, openai)
     else:
         show_menu()
-                    

@@ -1,0 +1,5 @@
+discord_webhook==1.4.1
+feedparser==6.0.11
+openai==1.84.0
+pyfiglet==1.0.3
+youtube_transcript_api==1.0.3
