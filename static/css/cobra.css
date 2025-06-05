@@ -354,7 +354,8 @@ mark {
     height: 100%;
     width: auto;
     filter: hue-rotate(120deg);
-    min-height: 300px; /* Minimum height to match video */
+    min-height: 300px;
+    mix-blend-mode: lighten; /* This will remove the black background */
 }
 
 .cobra-gif.cobra-flip img {
