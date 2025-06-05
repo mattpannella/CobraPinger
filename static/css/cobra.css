@@ -345,25 +345,45 @@ mark {
 }
 
 .cobra-gif img {
-    height: 200px;
+    height: 300px;  /* Increased from 250px */
     width: auto;
-    filter: hue-rotate(120deg); /* Makes the gif more green to match theme */
+    filter: hue-rotate(120deg);
+}
+
+.cobra-flip img {
+    transform: scaleX(-1);
 }
 
 .latest-video {
-    max-width: 800px;
+    max-width: 1200px;  /* Increased from 1000px */
 }
 
 .video-thumb {
-    height: 200px;
+    height: 300px;  /* Increased from 250px */
     object-fit: cover;
+    width: 100%;
 }
 
-.nav-link.active {
-    color: #00ff00 !important;
+.latest-video h4 {
+    font-size: 1.8rem;  /* Increased from 1.5rem */
+    margin-bottom: 1rem;
+    color: #00ff00;
+}
+
+.latest-video .card-body {
+    padding: 2.5rem;  /* Increased from 2rem */
+}
+
+/* Add new styles for clickable card */
+.latest-video-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.latest-video-link:hover {
+    text-decoration: none;
+}
+
+.latest-video-link:hover h4 {
     text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
-}
-
-.nav-link:hover {
-    color: #00cc00 !important;
 }
