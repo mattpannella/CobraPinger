@@ -10,7 +10,7 @@ import sys
 import select
 import re
 import traceback
-import sqlite3
+from database import DatabaseManager
 
 CONFIG_FILE = "config.json"
 
@@ -135,57 +135,56 @@ def send_discord_notification(video_url, summary, discord_webhook_url):
 
 def run_program_once(config, client):
     """Run the program once."""
-    db_path = config['db_path']
+    db = DatabaseManager(config['db_path'])
     
-    with sqlite3.connect(db_path) as conn:
-        for youtuber in config['youtubers']:
-            log(f"Checking for new videos for {youtuber['name']}...")
-            last_video_data = load_last_video_data(youtuber['name'])
-            new_video = fetch_new_video(f"https://www.youtube.com/feeds/videos.xml?channel_id={youtuber['channel_id']}")
-            
-            if new_video:
-                video_id = new_video.yt_videoid
-                video_title = new_video.title
-                video_published = new_video.published
+    for youtuber in config['youtubers']:
+        log(f"Checking for new videos for {youtuber['name']}...")
+        last_video_data = load_last_video_data(youtuber['name'])
+        new_video = fetch_new_video(f"https://www.youtube.com/feeds/videos.xml?channel_id={youtuber['channel_id']}")
+        
+        if new_video:
+            video_id = new_video.yt_videoid
+            video_title = new_video.title
+            video_published = new_video.published
 
-                if not any(video['id'] == video_id for video in last_video_data):
-                    log(f"New video detected with ID: {video_id}")
+            if not any(video['id'] == video_id for video in last_video_data):
+                log(f"New video detected with ID: {video_id}")
+                
+                # Store channel and video in database
+                channel_id = db.get_or_create_channel(youtuber['channel_id'], youtuber['name'])
+                db_video_id = db.store_video(video_id, channel_id, video_title)
+                
+                # Handle transcript
+                transcript = fetch_transcript(video_id)
+                if transcript:
+                    save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
+                    db.store_transcript(db_video_id, transcript)
                     
-                    # Store channel and video in database
-                    channel_id = get_or_create_channel(conn, youtuber['channel_id'], youtuber['name'])
-                    db_video_id = store_video(conn, video_id, channel_id, video_title)
-                    
-                    # Handle transcript
-                    transcript = fetch_transcript(video_id)
-                    if transcript:
-                        save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
-                        store_transcript(conn, db_video_id, transcript)
-                        
-                        # Handle summary
-                        if youtuber.get('openai_enabled', True):
-                            summary = summarize_text(transcript, youtuber['system_prompt'], client)
-                            if summary:
-                                store_summary(conn, db_video_id, summary)
-                            else:
-                                summary = "No summary available."
+                    # Handle summary
+                    if youtuber.get('openai_enabled', True):
+                        summary = summarize_text(transcript, youtuber['system_prompt'], client)
+                        if summary:
+                            db.store_summary(db_video_id, summary)
                         else:
-                            summary = "OpenAI functionality is disabled for this YouTuber."
+                            summary = "No summary available."
                     else:
-                        summary = "No transcript found."
-
-                    send_discord_notification(new_video.link, summary, config['discord_webhook_url'])
-
-                    last_video_data.append({
-                        'id': video_id,
-                        'title': video_title,
-                        'published': video_published
-                    })
-                    if len(last_video_data) > 5:
-                        last_video_data.pop(0)
-
-                    save_last_video_data(youtuber['name'], last_video_data)
+                        summary = "OpenAI functionality is disabled for this YouTuber."
                 else:
-                    log(f"No new video detected for {youtuber['name']}.")
+                    summary = "No transcript found."
+
+                send_discord_notification(new_video.link, summary, config['discord_webhook_url'])
+
+                last_video_data.append({
+                    'id': video_id,
+                    'title': video_title,
+                    'published': video_published
+                })
+                if len(last_video_data) > 5:
+                    last_video_data.pop(0)
+
+                save_last_video_data(youtuber['name'], last_video_data)
+            else:
+                log(f"No new video detected for {youtuber['name']}.")
 
 def run_program_continuously(config, client):
     """Run the program continuously, checking for new videos periodically."""
@@ -314,7 +313,7 @@ def show_menu():
     openai.api_key = config['openai_api_key']
 
     while True:
-    # Display the COBRAPINGER logo each time the menu is shown
+        # Display the COBRAPINGER logo each time the menu is shown
         display_logo()
         print("\n--- YouTube Monitor Menu ---")
         print("1. Run Program Once")
@@ -322,9 +321,9 @@ def show_menu():
         print("3. List YouTubers Being Tracked")
         print("4. Add New YouTuber")
         print("5. Remove YouTuber")
-        print("6. Toggle OpenAI Summarization for a YouTuber")  # New menu option
+        print("6. Toggle OpenAI Summarization for a YouTuber")
         print("7. Configure API Keys")
-        print("8. Build Database")
+        print("8. Initialize/Rebuild Database")
         print("9. Exit")
         choice = input("Enter your choice: ")
 
@@ -339,92 +338,19 @@ def show_menu():
         elif choice == "5":
             remove_youtuber(config)
         elif choice == "6":
-            toggle_openai_for_youtuber(config)  # New function call
+            toggle_openai_for_youtuber(config)
         elif choice == "7":
             configure_api_keys(config)
-        elif choice == "8":
-            create_database(config['db_path'])
-            build_schema(config['db_path'], config['schema_file_path'])
-        elif choice == "9":
+        elif choice == "8":  # New handler
+            db = DatabaseManager(config['db_path'])
+            db.create_database()
+            db.build_schema(config['schema_file_path'])
+            log("Database initialized successfully.")
+        elif choice == "9":  # Changed to 9
             break
         else:
             print("Invalid choice. Please try again.")
 
-
-
-def create_database(db_path: str) -> bool:
-    """Creates the SQLite DB file if it doesn't exist."""
-    if os.path.exists(db_path):
-        print(f"Database already exists at {db_path}")
-        return False
-    else:
-        # Just connect to create the file
-        with sqlite3.connect(db_path):
-            pass
-        print(f"Database created at {db_path}")
-        return True
-
-def build_schema(db_path: str, schema_file_path: str) -> None:
-    """Builds the DB schema from a .sql file if the tables don't already exist."""
-    if not os.path.exists(db_path):
-        raise FileNotFoundError(f"Database file not found at {db_path}")
-    
-    if not os.path.exists(schema_file_path):
-        raise FileNotFoundError(f"Schema file not found at {schema_file_path}")
-
-    with sqlite3.connect(db_path) as conn, open(schema_file_path, 'r') as f:
-        schema_sql = f.read()
-        conn.executescript(schema_sql)
-        print(f"Schema applied from {schema_file_path}")
-
-def get_or_create_channel(conn, youtube_id: str, name: str) -> int:
-    """Get channel ID from database or create if not exists."""
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id FROM channel WHERE youtube_id = ?",
-        (youtube_id,)
-    )
-    result = cursor.fetchone()
-    
-    if result:
-        return result[0]
-    
-    cursor.execute(
-        "INSERT INTO channel (youtube_id, name) VALUES (?, ?)",
-        (youtube_id, name)
-    )
-    conn.commit()
-    return cursor.lastrowid
-
-def store_video(conn, youtube_id: str, channel_id: int, title: str) -> int:
-    """Store video in database and return its ID."""
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT OR IGNORE INTO video (youtube_id, channel_id, title) VALUES (?, ?, ?)",
-        (youtube_id, channel_id, title)
-    )
-    conn.commit()
-    
-    cursor.execute("SELECT id FROM video WHERE youtube_id = ?", (youtube_id,))
-    return cursor.fetchone()[0]
-
-def store_transcript(conn, video_id: int, content: str) -> None:
-    """Store video transcript in database."""
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO transcript (video_id, content) VALUES (?, ?)",
-        (video_id, content)
-    )
-    conn.commit()
-
-def store_summary(conn, video_id: int, content: str) -> None:
-    """Store video summary in database."""
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO summary (video_id, content) VALUES (?, ?)",
-        (video_id, content)
-    )
-    conn.commit()
 
 if __name__ == "__main__":
     import sys
