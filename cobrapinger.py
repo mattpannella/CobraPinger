@@ -135,45 +135,57 @@ def send_discord_notification(video_url, summary, discord_webhook_url):
 
 def run_program_once(config, client):
     """Run the program once."""
-    for youtuber in config['youtubers']:
-        log(f"Checking for new videos for {youtuber['name']}...")
-        last_video_data = load_last_video_data(youtuber['name'])
-        new_video = fetch_new_video(f"https://www.youtube.com/feeds/videos.xml?channel_id={youtuber['channel_id']}")
-        if new_video:
-            video_id = new_video.yt_videoid
-            video_title = new_video.title
-            video_published = new_video.published
+    db_path = config['db_path']
+    
+    with sqlite3.connect(db_path) as conn:
+        for youtuber in config['youtubers']:
+            log(f"Checking for new videos for {youtuber['name']}...")
+            last_video_data = load_last_video_data(youtuber['name'])
+            new_video = fetch_new_video(f"https://www.youtube.com/feeds/videos.xml?channel_id={youtuber['channel_id']}")
+            
+            if new_video:
+                video_id = new_video.yt_videoid
+                video_title = new_video.title
+                video_published = new_video.published
 
-            if not any(video['id'] == video_id for video in last_video_data):
-                log(f"New video detected with ID: {video_id}")
-                transcript = fetch_transcript(video_id)
-                if transcript:
-                    save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
+                if not any(video['id'] == video_id for video in last_video_data):
+                    log(f"New video detected with ID: {video_id}")
                     
-                    # Check if OpenAI is enabled for this YouTuber
-                    if youtuber.get('openai_enabled', True):
-                        summary = summarize_text(transcript, youtuber['system_prompt'], client)
-                        if not summary:
-                            summary = "No summary available."
+                    # Store channel and video in database
+                    channel_id = get_or_create_channel(conn, youtuber['channel_id'], youtuber['name'])
+                    db_video_id = store_video(conn, video_id, channel_id, video_title)
+                    
+                    # Handle transcript
+                    transcript = fetch_transcript(video_id)
+                    if transcript:
+                        save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
+                        store_transcript(conn, db_video_id, transcript)
+                        
+                        # Handle summary
+                        if youtuber.get('openai_enabled', True):
+                            summary = summarize_text(transcript, youtuber['system_prompt'], client)
+                            if summary:
+                                store_summary(conn, db_video_id, summary)
+                            else:
+                                summary = "No summary available."
+                        else:
+                            summary = "OpenAI functionality is disabled for this YouTuber."
                     else:
-                        summary = "OpenAI functionality is disabled for this YouTuber."
+                        summary = "No transcript found."
 
+                    send_discord_notification(new_video.link, summary, config['discord_webhook_url'])
+
+                    last_video_data.append({
+                        'id': video_id,
+                        'title': video_title,
+                        'published': video_published
+                    })
+                    if len(last_video_data) > 5:
+                        last_video_data.pop(0)
+
+                    save_last_video_data(youtuber['name'], last_video_data)
                 else:
-                   summary = "No transcript found."
-
-                send_discord_notification(new_video.link, summary, config['discord_webhook_url'])
-
-                last_video_data.append({
-                    'id': video_id,
-                    'title': video_title,
-                    'published': video_published
-                })
-                if len(last_video_data) > 5:  # Keep only the last 5 videos
-                    last_video_data.pop(0)
-
-                save_last_video_data(youtuber['name'], last_video_data)
-            else:
-                log(f"No new video detected for {youtuber['name']}.")
+                    log(f"No new video detected for {youtuber['name']}.")
 
 def run_program_continuously(config, client):
     """Run the program continuously, checking for new videos periodically."""
@@ -365,7 +377,54 @@ def build_schema(db_path: str, schema_file_path: str) -> None:
         conn.executescript(schema_sql)
         print(f"Schema applied from {schema_file_path}")
 
+def get_or_create_channel(conn, youtube_id: str, name: str) -> int:
+    """Get channel ID from database or create if not exists."""
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id FROM channel WHERE youtube_id = ?",
+        (youtube_id,)
+    )
+    result = cursor.fetchone()
+    
+    if result:
+        return result[0]
+    
+    cursor.execute(
+        "INSERT INTO channel (youtube_id, name) VALUES (?, ?)",
+        (youtube_id, name)
+    )
+    conn.commit()
+    return cursor.lastrowid
 
+def store_video(conn, youtube_id: str, channel_id: int, title: str) -> int:
+    """Store video in database and return its ID."""
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR IGNORE INTO video (youtube_id, channel_id, title) VALUES (?, ?, ?)",
+        (youtube_id, channel_id, title)
+    )
+    conn.commit()
+    
+    cursor.execute("SELECT id FROM video WHERE youtube_id = ?", (youtube_id,))
+    return cursor.fetchone()[0]
+
+def store_transcript(conn, video_id: int, content: str) -> None:
+    """Store video transcript in database."""
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO transcript (video_id, content) VALUES (?, ?)",
+        (video_id, content)
+    )
+    conn.commit()
+
+def store_summary(conn, video_id: int, content: str) -> None:
+    """Store video summary in database."""
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO summary (video_id, content) VALUES (?, ?)",
+        (video_id, content)
+    )
+    conn.commit()
 
 if __name__ == "__main__":
     import sys
@@ -376,4 +435,3 @@ if __name__ == "__main__":
         run_program_continuously(config, openai)
     else:
         show_menu()
-                    
