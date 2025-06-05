@@ -416,3 +416,23 @@ class DatabaseManager:
             ''', (video_id,))
             result = cursor.fetchone()
             return result['content'] if result else None
+
+    def get_random_quote(self):
+        """Get a random quote with its video details."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    q.content as quote,
+                    v.id as video_id,
+                    v.title,
+                    c.name as channel_name
+                FROM quote q
+                JOIN video v ON q.video_id = v.id
+                JOIN channel c ON v.channel_id = c.id
+                ORDER BY RANDOM()
+                LIMIT 1
+            """)
+            result = cursor.fetchone()
+            return dict(result) if result else None

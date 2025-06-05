@@ -56,3 +56,10 @@ CREATE TABLE IF NOT EXISTS video_topic (
 -- Add unique index for video_topic pairs
 CREATE UNIQUE INDEX IF NOT EXISTS idx_video_topic_unique 
 ON video_topic(video_id, topic_id);
+
+CREATE TABLE IF NOT EXIST quote {
+    id INTEGER PRIMARY KEY,
+    video_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    FOREIGN KEY (video_id) REFERENCES video(id)
+}

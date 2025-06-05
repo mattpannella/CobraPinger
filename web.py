@@ -41,6 +41,9 @@ def index():
         channel_ids=selected_channels if selected_channels else None
     )
     
+    # Get random quote
+    quote = db.get_random_quote()
+    
     return render_template(
         'index.html', 
         videos=result['videos'],
@@ -48,7 +51,8 @@ def index():
         pages=result['pages'],
         current_page=page,
         channels=channels,
-        selected_channels=selected_channels
+        selected_channels=selected_channels,
+        quote=quote
     )
 
 @app.route('/video/<int:video_id>')

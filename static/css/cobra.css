@@ -325,3 +325,21 @@ mark {
     background-color: #00ff00;
     box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
+
+.quote-card {
+    border-left: 4px solid #00ff00;
+    background-color: rgba(0, 255, 0, 0.05);
+}
+
+.quote-card blockquote {
+    font-size: 1.1rem;
+    font-style: italic;
+}
+
+.quote-card .blockquote-footer a {
+    color: #00ff00;
+}
+
+.quote-card .blockquote-footer a:hover {
+    color: #00cc00;
+}
