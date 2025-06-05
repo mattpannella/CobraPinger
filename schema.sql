@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS video (
     youtube_id TEXT UNIQUE NOT NULL,
     channel_id INTEGER NOT NULL,
     title TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (channel_id) REFERENCES channel(id)
 );
 
