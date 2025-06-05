@@ -22,7 +22,7 @@
             </div>
             {% endfor %}
             
-            {{ pagination(pages, current_page, '/search', {'q': query}) }}
+            {{ pagination(pages, current_page, '/search', {'q': query}, total=total) }}
         {% else %}
             <div class="alert alert-info">No results found.</div>
         {% endif %}

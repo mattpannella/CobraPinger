@@ -6,6 +6,10 @@ from datetime import datetime
 import calendar
 
 app = Flask(__name__, static_folder='static')
+
+# Add min function to Jinja globals
+app.jinja_env.globals.update(min=min)
+
 db = DatabaseManager('db.sqlite')
 
 @app.template_filter('markdown')

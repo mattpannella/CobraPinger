@@ -67,6 +67,6 @@
     {% endfor %}
 </div>
 
-{{ pagination(pages, current_page, '/', {'channels': selected_channels} if selected_channels else {}) }}
+{{ pagination(pages, current_page, '/', {'channels': selected_channels} if selected_channels else {}, total=total) }}
 {% endif %}
 {% endblock %}

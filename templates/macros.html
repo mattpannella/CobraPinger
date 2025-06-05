@@ -1,25 +1,92 @@
-{% macro pagination(pages, current_page, base_url='', params={}) %}
+{% macro pagination(pages, current_page, base_url='', params={}, total=0) %}
 {% if pages > 1 %}
-<nav aria-label="Page navigation" class="mt-4">
-    <ul class="pagination justify-content-center">
-        {% if current_page > 1 %}
-        <li class="page-item">
-            <a class="page-link" href="{{ base_url }}?page={{ current_page - 1 }}{% for key, value in params.items() %}&{{ key }}={{ value }}{% endfor %}">&laquo; Previous</a>
-        </li>
-        {% endif %}
-        
-        {% for p in range(1, pages + 1) %}
-        <li class="page-item {% if p == current_page %}active{% endif %}">
-            <a class="page-link" href="{{ base_url }}?page={{ p }}{% for key, value in params.items() %}&{{ key }}={{ value }}{% endfor %}">{{ p }}</a>
-        </li>
-        {% endfor %}
-        
-        {% if current_page < pages %}
-        <li class="page-item">
-            <a class="page-link" href="{{ base_url }}?page={{ current_page + 1 }}{% for key, value in params.items() %}&{{ key }}={{ value }}{% endfor %}">Next &raquo;</a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
+<div class="d-flex flex-column align-items-center">
+    {% if total > 0 %}
+    <p class="text-muted mb-2">
+        Showing {{ ((current_page - 1) * 10) + 1 }}-{{ min(current_page * 10, total) }} of {{ total }} items
+    </p>
+    {% endif %}
+    <nav aria-label="Page navigation" class="mt-1">
+        <ul class="pagination justify-content-center flex-wrap">
+            {% if current_page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ base_url }}?page={{ current_page - 1 }}{% for key, value in params.items() %}&{{ key }}={{ value }}{% endfor %}">&laquo; Previous</a>
+            </li>
+            {% endif %}
+            
+            {% set window_size = 2 %}
+            {% for p in range(1, pages + 1) %}
+                {% if p == 1 or p == pages or (p >= current_page - window_size and p <= current_page + window_size) %}
+                    <li class="page-item {% if p == current_page %}active{% endif %}">
+                        <a class="page-link" href="{{ base_url }}?page={{ p }}{% for key, value in params.items() %}&{{ key }}={{ value }}{% endfor %}">{{ p }}</a>
+                    </li>
+                {% elif p == current_page - window_size - 1 or p == current_page + window_size + 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-bs-toggle="modal" data-bs-target="#pageJumpModal" 
+                           data-max-page="{{ pages }}" data-base-url="{{ base_url }}" 
+                           data-params="{{ params|tojson|escape }}">...</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if current_page < pages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ base_url }}?page={{ current_page + 1 }}{% for key, value in params.items() %}&{{ key }}={{ value }}{% endfor %}">Next &raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+
+<!-- Page Jump Modal -->
+<div class="modal fade" id="pageJumpModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Jump to Page</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="pageJumpForm" onsubmit="return jumpToPage(event)">
+                    <div class="mb-3">
+                        <label for="pageNumber" class="form-label">Enter page number (1-<span id="maxPage"></span>):</label>
+                        <input type="number" class="form-control" id="pageNumber" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Go</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function jumpToPage(event) {
+    event.preventDefault();
+    const modal = document.getElementById('pageJumpModal');
+    const pageNumber = document.getElementById('pageNumber').value;
+    const baseUrl = modal.getAttribute('data-base-url');
+    const params = JSON.parse(modal.getAttribute('data-params'));
+    
+    let url = `${baseUrl}?page=${pageNumber}`;
+    for (const [key, value] of Object.entries(params)) {
+        url += `&${key}=${value}`;
+    }
+    
+    window.location.href = url;
+    return false;
+}
+
+document.getElementById('pageJumpModal').addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const maxPage = button.getAttribute('data-max-page');
+    const baseUrl = button.getAttribute('data-base-url');
+    const params = button.getAttribute('data-params');
+    
+    this.setAttribute('data-base-url', baseUrl);
+    this.setAttribute('data-params', params);
+    document.getElementById('maxPage').textContent = maxPage;
+    document.getElementById('pageNumber').setAttribute('max', maxPage);
+});
+</script>
 {% endif %}
 {% endmacro %}
