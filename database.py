@@ -375,3 +375,17 @@ class DatabaseManager:
                 WHERE s.content IS NULL OR s.video_id IS NULL
             """)
             return [dict(row) for row in cursor.fetchall()]
+
+    def get_topic_counts(self):
+        """Get all topics and their video counts."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT t.name, COUNT(vt.video_id) as count
+                FROM topic t
+                LEFT JOIN video_topic vt ON t.id = vt.topic_id
+                GROUP BY t.id, t.name
+                ORDER BY count DESC
+            """)
+            return cursor.fetchall()

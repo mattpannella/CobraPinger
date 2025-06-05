@@ -227,3 +227,92 @@ mark {
         opacity: 0;
     }
 }
+
+/* Tag Cloud Styles */
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    background-color: #1a1a1a;
+    border-radius: 8px;
+    border: 1px solid #2a2a2a;
+    padding: 2rem;
+    min-height: 200px;
+}
+
+.tag-item {
+    position: relative;
+    color: #00ff00;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    background-color: #006600;
+    transition: all 0.3s ease;
+    margin: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.tag-item:hover {
+    color: #00ff00;
+    background-color: #008800;
+    transform: scale(1.1);
+    text-decoration: none;
+}
+
+.topic-count {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 0.1rem 0.5rem;
+    margin-left: 0.5rem;
+    font-size: 0.8rem !important;
+    min-width: 1.5em;
+    text-align: center;
+    opacity: 0.8;
+}
+
+/* Add size-based colors */
+.tag-item[style*="font-size: 3"] {
+    background-color: #008800;
+}
+
+.tag-item[style*="font-size: 2.5"] {
+    background-color: #007700;
+}
+
+.tag-item[style*="font-size: 2"] {
+    background-color: #006600;
+}
+
+.tag-item[style*="font-size: 1.5"] {
+    background-color: #005500;
+}
+
+.tag-item[style*="font-size: 1"] {
+    background-color: #004400;
+}
+
+.card-header[role="button"] {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.card-header[role="button"]:hover {
+    background-color: #2a2a2a;
+}
+
+.card-header[role="button"] .bi-chevron-down {
+    transition: transform 0.2s ease;
+}
+
+.card-header[role="button"][aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+}
+
+.channel-filter {
+    max-height: 300px;
+    overflow-y: auto;
+}

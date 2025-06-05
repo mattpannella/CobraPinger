@@ -136,5 +136,11 @@ def calendar_view(year=None, month=None):
         next_year=next_year
     )
 
+@app.route('/topics')
+def topic_cloud():
+    """Show all topics in a tag cloud."""
+    topics = db.get_topic_counts()  # We'll create this method
+    return render_template('topics.html', topics=topics)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=9595, debug=True)
