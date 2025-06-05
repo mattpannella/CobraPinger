@@ -19,7 +19,9 @@
         {% if video.topics %}
         <div class="mb-3">
             {% for topic in video.topics %}
-            <span class="badge bg-secondary me-1">{{ topic }}</span>
+            <a href="/topic/{{ topic }}" class="text-decoration-none">
+                <span class="badge bg-secondary me-1">{{ topic }}</span>
+            </a>
             {% endfor %}
         </div>
         {% endif %}

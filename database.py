@@ -87,10 +87,10 @@ class DatabaseManager:
         """Get topic ID from database or create if not exists."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT id FROM topic WHERE name = ?",
-                (topic_name.lower(),)
-            )
+            # Trim whitespace and convert to lowercase
+            topic_name = topic_name.lower().strip()
+            
+            cursor.execute("SELECT id FROM topic WHERE TRIM(name) = ?", (topic_name,))
             result = cursor.fetchone()
             
             if result:
@@ -98,7 +98,7 @@ class DatabaseManager:
             
             cursor.execute(
                 "INSERT INTO topic (name) VALUES (?)",
-                (topic_name.lower(),)
+                (topic_name,)
             )
             conn.commit()
             return cursor.lastrowid
@@ -200,3 +200,48 @@ class DatabaseManager:
                 LIMIT ? OFFSET ?
             """, (query, per_page, offset))
             return cursor.fetchall()
+
+    def get_topic_id(self, topic_name: str) -> int:
+        """Get topic ID from database."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            print(f"Looking up topic: {topic_name}")  # Debug log
+            
+            # Trim whitespace and convert to lowercase for comparison
+            cursor.execute("SELECT id FROM topic WHERE TRIM(name) = TRIM(?)", (topic_name.lower(),))
+            result = cursor.fetchone()
+            
+            if result:
+                print(f"Found topic ID: {result[0]}")  # Debug log
+            else:
+                print("Topic not found in database")  # Debug log
+                cursor.execute("SELECT TRIM(name) FROM topic")
+                all_topics = cursor.fetchall()
+                print(f"Available topics: {[t[0] for t in all_topics]}")
+                
+            return result[0] if result else None
+
+    def get_videos_by_topic(self, topic_id: int, page: int = 1, per_page: int = 10):
+        """Get paginated list of videos for a specific topic."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            offset = (page - 1) * per_page
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.youtube_id,
+                    v.title,
+                    c.name as channel_name,
+                    s.content as summary,
+                    v.thumbnail_url
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                JOIN video_topic vt ON v.id = vt.video_id
+                LEFT JOIN summary s ON v.id = s.video_id
+                WHERE vt.topic_id = ?
+                ORDER BY v.youtube_created_at DESC
+                LIMIT ? OFFSET ?
+            """, (topic_id, per_page, offset))
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
