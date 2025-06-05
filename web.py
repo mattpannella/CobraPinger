@@ -53,17 +53,13 @@ def search():
 
 @app.route('/topic/<topic_name>')
 def topic_videos(topic_name):
-    print(f"Route called with topic: {topic_name}")  # Debug log
     page = request.args.get('page', 1, type=int)
     topic_id = db.get_topic_id(topic_name)
-    
-    print(f"Got topic_id: {topic_id}")  # Debug log
     
     if topic_id is None:
         return "Topic not found", 404
         
     videos = db.get_videos_by_topic(topic_id, page=page)
-    print(f"Found {len(videos)} videos for topic")  # Debug log
     return render_template('topic.html', videos=videos, topic=topic_name)
 
 if __name__ == '__main__':

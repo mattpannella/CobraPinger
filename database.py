@@ -217,19 +217,10 @@ class DatabaseManager:
         """Get topic ID from database."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            print(f"Looking up topic: {topic_name}")  # Debug log
             
-            # Trim whitespace and convert to lowercase for comparison
+            #trim whitespace and convert to lowercase for comparison
             cursor.execute("SELECT id FROM topic WHERE TRIM(name) = TRIM(?)", (topic_name.lower(),))
             result = cursor.fetchone()
-            
-            if result:
-                print(f"Found topic ID: {result[0]}")  # Debug log
-            else:
-                print("Topic not found in database")  # Debug log
-                cursor.execute("SELECT TRIM(name) FROM topic")
-                all_topics = cursor.fetchall()
-                print(f"Available topics: {[t[0] for t in all_topics]}")
                 
             return result[0] if result else None
 

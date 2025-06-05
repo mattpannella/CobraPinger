@@ -11,6 +11,7 @@ import select
 import re
 import traceback
 from database import DatabaseManager
+from googleapiclient.discovery import build
 
 CONFIG_FILE = "config.json"
 
@@ -313,9 +314,11 @@ def configure_api_keys(config):
     """Configure API keys."""
     openai_api_key = input("Enter the OpenAI API Key: ")
     discord_webhook_url = input("Enter the Discord Webhook URL: ")
+    youtube_api_key = input("Enter the YouTube API Key: ")
 
     config['openai_api_key'] = openai_api_key
     config['discord_webhook_url'] = discord_webhook_url
+    config['youtube_api_key'] = youtube_api_key
 
     save_config(config)
     log("API keys configured successfully.")
@@ -346,8 +349,59 @@ def extract_topics(text: str, client) -> list[str]:
         log(f"Could not extract topics: {e}")
         return []
     
+def fetch_videos_from_channel(youtube_api_key: str, channel_id: str, max_results: int = 25) -> list:
+    """Fetch historical videos from a YouTube channel using the Data API."""
+    try:
+        youtube = build('youtube', 'v3', developerKey=youtube_api_key)
+        
+        # First get the channel's upload playlist ID
+        channel_response = youtube.channels().list(
+            part='contentDetails',
+            id=channel_id
+        ).execute()
+        
+        if not channel_response['items']:
+            log("Channel not found")
+            return []
+            
+        uploads_playlist_id = channel_response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+        
+        # Then get the videos from that playlist
+        videos = []
+        next_page_token = None
+        
+        while len(videos) < max_results:
+            playlist_items = youtube.playlistItems().list(
+                part='snippet',
+                playlistId=uploads_playlist_id,
+                maxResults=min(50, max_results - len(videos)),
+                pageToken=next_page_token
+            ).execute()
+            
+            for item in playlist_items['items']:
+                videos.append({
+                    'id': item['snippet']['resourceId']['videoId'],
+                    'title': item['snippet']['title'],
+                    'published': item['snippet']['publishedAt'],
+                    'thumbnail_url': item['snippet']['thumbnails']['medium']['url']
+                })
+            
+            next_page_token = playlist_items.get('nextPageToken')
+            if not next_page_token:
+                break
+                
+        return videos[:max_results]
+        
+    except Exception as e:
+        log(f"Error fetching videos: {e}")
+        return []
+
 def load_recent_videos(config, client):
-    """Load recent videos from a selected YouTuber."""
+    """Load historical videos using YouTube Data API."""
+    if not config.get('youtube_api_key'):
+        log("YouTube API key not configured. Please add it in the API keys menu.")
+        return
+
     if not config['youtubers']:
         log("No YouTubers are being tracked currently.")
         return
@@ -357,7 +411,7 @@ def load_recent_videos(config, client):
         print(f"{index}. {youtuber['name']}")
     
     try:
-        choice = int(input("Select YouTuber (number): "))
+        choice = int(input("Select YouTuber: "))
         if not 1 <= choice <= len(config['youtubers']):
             log("Invalid choice.")
             return
@@ -370,35 +424,30 @@ def load_recent_videos(config, client):
         youtuber = config['youtubers'][choice - 1]
         log(f"Loading {num_videos} recent videos for {youtuber['name']}...")
         
-        feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={youtuber['channel_id']}"
-        feed = feedparser.parse(feed_url)
-        
+        videos = fetch_videos_from_channel(config['youtube_api_key'], youtuber['channel_id'], num_videos)
+        if not videos:
+            log("No videos found or error occurred.")
+            return
+            
         db = DatabaseManager(config['db_path'])
         channel_id = db.get_or_create_channel(youtuber['channel_id'], youtuber['name'])
         
         videos_processed = 0
-        for entry in feed.entries:
+        for video in videos:
             if videos_processed >= num_videos:
                 break
                 
-            video_id = entry.yt_videoid
-            
-            # Skip if video already exists
-            if db.video_exists(video_id):
-                log(f"Video {video_id} already exists in database, skipping...")
+            if db.video_exists(video['id']):
+                log(f"Video {video['id']} already exists in database, skipping...")
                 continue
             
-            video_title = entry.title
-            video_published = entry.published
-            
-            # Get thumbnail URL
-            thumbnail_url = None
-            if hasattr(entry, 'media_thumbnail'):
-                thumbnail_url = entry.media_thumbnail[0]['url']
+            video_id = video['id']
+            video_title = video['title']
+            video_published = video['published']
+            thumbnail_url = video['thumbnail_url']
 
             log(f"Processing video: {video_title}")
             
-            # Store video
             db_video_id = db.store_video(
                 video_id, 
                 channel_id, 
@@ -407,13 +456,11 @@ def load_recent_videos(config, client):
                 thumbnail_url=thumbnail_url
             )
             
-            # Handle transcript
             transcript = fetch_transcript(video_id)
             if transcript:
                 save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
                 db.store_transcript(db_video_id, transcript)
                 
-                # Extract and store topics
                 topics = extract_topics(transcript, client)
                 topic_ids = []
                 for topic in topics:
@@ -422,7 +469,6 @@ def load_recent_videos(config, client):
                 db.link_video_topics(db_video_id, topic_ids)
                 log(f"Stored {len(topics)} topics for video")
 
-                # Handle summary
                 if youtuber.get('openai_enabled', True):
                     summary = summarize_text(transcript, youtuber['system_prompt'], client)
                     if summary:
@@ -482,9 +528,9 @@ def show_menu():
             db.create_database()
             db.build_schema(config['schema_file_path'])
             log("Database initialized successfully.")
-        elif choice == "9":  # New option
+        elif choice == "9":
             load_recent_videos(config, openai)
-        elif choice == "10":  # Updated number
+        elif choice == "10":
             break
         else:
             print("Invalid choice. Please try again.")
