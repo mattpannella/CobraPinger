@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - CobraPinger{% endblock %}
+
+{% block content %}
+<h2>Search Results for "{{ query }}"</h2>
+
+<style>
+    .search-highlight {
+        background-color: #fff3cd;
+        padding: 0 2px;
+        border-radius: 2px;
+    }
+</style>
+
+<div class="row">
+    {% for result in results %}
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ result[2] }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ result[3] }}</h6>
+                <p class="card-text">
+                    {{ result[5]|replace('[highlight]', '<span class="search-highlight">')|replace('[/highlight]', '</span>')|safe }}
+                </p>
+                <a href="/video/{{ result[0] }}" class="btn btn-primary">View Video</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not results %}
+<div class="alert alert-info">
+    No results found for "{{ query }}"
+</div>
+{% endif %}
+{% endblock %}

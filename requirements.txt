@@ -3,3 +3,4 @@ feedparser==6.0.11
 openai==1.84.0
 pyfiglet==1.0.3
 youtube_transcript_api==1.0.3
+markdown=3.8

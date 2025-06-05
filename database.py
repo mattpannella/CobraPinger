@@ -111,3 +111,88 @@ class DatabaseManager:
                 [(video_id, topic_id) for topic_id in topic_ids]
             )
             conn.commit()
+
+    def get_all_videos(self, page: int = 1, per_page: int = 10):
+        """Get paginated list of videos with their channels and summaries."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            offset = (page - 1) * per_page
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.youtube_id,
+                    v.title,
+                    c.name as channel_name,
+                    s.content as summary
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                LEFT JOIN summary s ON v.id = s.video_id
+                ORDER BY v.id DESC
+                LIMIT ? OFFSET ?
+            """, (per_page, offset))
+            return cursor.fetchall()
+
+    def get_video_details(self, video_id: int):
+        """Get complete details for a single video."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            # Get video, channel and summary
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.youtube_id,
+                    v.title,
+                    c.name as channel_name,
+                    t.content as transcript,
+                    s.content as summary
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                LEFT JOIN transcript t ON v.id = t.video_id
+                LEFT JOIN summary s ON v.id = s.video_id
+                WHERE v.id = ?
+            """, (video_id,))
+            video_data = cursor.fetchone()
+            
+            # Get topics for the video
+            cursor.execute("""
+                SELECT t.name
+                FROM topic t
+                JOIN video_topic vt ON t.id = vt.topic_id
+                WHERE vt.video_id = ?
+            """, (video_id,))
+            topics = [row[0] for row in cursor.fetchall()]
+            
+            if video_data:
+                return {
+                    'id': video_data[0],
+                    'youtube_id': video_data[1],
+                    'title': video_data[2],
+                    'channel_name': video_data[3],
+                    'transcript': video_data[4],
+                    'summary': video_data[5],
+                    'topics': topics
+                }
+            return None
+
+    def search_videos(self, query: str, page: int = 1, per_page: int = 10):
+        """Search videos by transcript content."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            offset = (page - 1) * per_page
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.youtube_id,
+                    v.title,
+                    c.name as channel_name,
+                    s.content as summary,
+                    snippet(transcript_search, 0, '[highlight]', '[/highlight]', '...', 50) as context
+                FROM transcript_search
+                JOIN video v ON transcript_search.rowid = v.id
+                JOIN channel c ON v.channel_id = c.id
+                LEFT JOIN summary s ON v.id = s.video_id
+                WHERE transcript_search MATCH ?
+                ORDER BY rank
+                LIMIT ? OFFSET ?
+            """, (query, per_page, offset))
+            return cursor.fetchall()

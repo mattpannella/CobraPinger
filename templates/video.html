@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ video.title }} - CobraPinger{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="ratio ratio-16x9">
+            <iframe src="https://www.youtube.com/embed/{{ video.youtube_id }}" 
+                    title="{{ video.title }}" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen></iframe>
+        </div>
+    </div>
+    <div class="col-md-12">
+        <h1>{{ video.title }}</h1>
+        <h5 class="text-muted">{{ video.channel_name }}</h5>
+        
+        {% if video.topics %}
+        <div class="mb-3">
+            {% for topic in video.topics %}
+            <span class="badge bg-secondary me-1">{{ topic }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if video.summary %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Summary</h5>
+            </div>
+            <div class="card-body">
+                {{ video.summary|markdown|safe }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if video.transcript %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Transcript</h5>
+            </div>
+            <div class="card-body">
+                {{ video.transcript|nl2br }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
