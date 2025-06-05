@@ -16,18 +16,18 @@
     {% for video in videos %}
     <div class="col-md-6 mb-4">
         <div class="card">
-            {% if video[6] %}
-            <img src="{{ video[6] }}" class="card-img-top" alt="{{ video[2] }}">
+            {% if video.thumbnail_url %}
+            <img src="{{ video.thumbnail_url }}" class="card-img-top" alt="{{ video.title }}">
             {% endif %}
             <div class="card-body">
-                <h5 class="card-title">{{ video[2] }}</h5>
-                <h6 class="card-subtitle mb-2 text-muted">{{ video[3] }}</h6>
-                {% if video[4] %}
-                    <p class="card-text">{{ video[4]|truncate(200) }}</p>
+                <h5 class="card-title">{{ video.title }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ video.channel_name }}</h6>
+                {% if video.summary %}
+                    <p class="card-text">{{ video.summary|truncate(200) }}</p>
                 {% else %}
                     <p class="card-text">No summary available</p>
                 {% endif %}
-                <a href="/video/{{ video[0] }}" class="btn btn-primary">View Details</a>
+                <a href="/video/{{ video.id }}" class="btn btn-primary">View Details</a>
             </div>
         </div>
     </div>

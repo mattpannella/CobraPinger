@@ -116,6 +116,7 @@ class DatabaseManager:
     def get_all_videos(self, page: int = 1, per_page: int = 10):
         """Get paginated list of videos with their channels and summaries."""
         with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row  # This makes rows accessible by column name
             cursor = conn.cursor()
             offset = (page - 1) * per_page
             cursor.execute("""
@@ -132,7 +133,8 @@ class DatabaseManager:
                 ORDER BY v.youtube_created_at DESC
                 LIMIT ? OFFSET ?
             """, (per_page, offset))
-            return cursor.fetchall()
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]  # Convert each row to a dictionary
 
     def get_video_details(self, video_id: int):
         """Get complete details for a single video."""
