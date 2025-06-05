@@ -113,34 +113,44 @@ class DatabaseManager:
             )
             conn.commit()
 
-    def get_all_videos(self, page: int = 1, per_page: int = 10):
+    def get_all_videos(self, page: int = 1, per_page: int = 10, channel_ids: list[int] = None):
         """Get paginated list of videos with their channels and summaries."""
         with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row  # This makes rows accessible by column name
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             offset = (page - 1) * per_page
-            cursor.execute("""
+
+            query = """
                 SELECT 
                     v.id,
                     v.youtube_id,
                     v.title,
                     c.name as channel_name,
                     s.content as summary,
-                    v.thumbnail_url
+                    v.thumbnail_url,
+                    v.youtube_created_at
                 FROM video v
                 JOIN channel c ON v.channel_id = c.id
                 LEFT JOIN summary s ON v.id = s.video_id
-                ORDER BY v.youtube_created_at DESC
-                LIMIT ? OFFSET ?
-            """, (per_page, offset))
+            """
+
+            params = []
+            if channel_ids:
+                placeholders = ','.join('?' * len(channel_ids))
+                query += f" WHERE v.channel_id IN ({placeholders})"
+                params.extend(channel_ids)
+
+            query += " ORDER BY v.youtube_created_at DESC LIMIT ? OFFSET ?"
+            params.extend([per_page, offset])
+
+            cursor.execute(query, params)
             rows = cursor.fetchall()
-            return [dict(row) for row in rows]  # Convert each row to a dictionary
+            return [dict(row) for row in rows]
 
     def get_video_details(self, video_id: int):
         """Get complete details for a single video."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            # Get video, channel and summary
             cursor.execute("""
                 SELECT 
                     v.id,
@@ -148,7 +158,8 @@ class DatabaseManager:
                     v.title,
                     c.name as channel_name,
                     t.content as transcript,
-                    s.content as summary
+                    s.content as summary,
+                    v.youtube_created_at
                 FROM video v
                 JOIN channel c ON v.channel_id = c.id
                 LEFT JOIN transcript t ON v.id = t.video_id
@@ -174,6 +185,7 @@ class DatabaseManager:
                     'channel_name': video_data[3],
                     'transcript': video_data[4],
                     'summary': video_data[5],
+                    'youtube_created_at': video_data[6],
                     'topics': topics
                 }
             return None
@@ -245,3 +257,18 @@ class DatabaseManager:
             """, (topic_id, per_page, offset))
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
+
+    def video_exists(self, youtube_id: str) -> bool:
+        """Check if a video already exists in the database."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM video WHERE youtube_id = ?", (youtube_id,))
+            return cursor.fetchone() is not None
+
+    def get_all_channels(self):
+        """Get list of all channels."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, name FROM channel ORDER BY name")
+            return [dict(row) for row in cursor.fetchall()]

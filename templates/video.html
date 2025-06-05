@@ -14,7 +14,10 @@
     </div>
     <div class="col-md-12">
         <h1>{{ video.title }}</h1>
-        <h5 class="text-muted">{{ video.channel_name }}</h5>
+        <h5 class="text-muted">
+            {{ video.channel_name }}
+            <small class="ms-2">{{ video.youtube_created_at.split('T')[0] }}</small>
+        </h5>
         
         {% if video.topics %}
         <div class="mb-3">

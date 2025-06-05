@@ -345,6 +345,102 @@ def extract_topics(text: str, client) -> list[str]:
     except Exception as e:
         log(f"Could not extract topics: {e}")
         return []
+    
+def load_recent_videos(config, client):
+    """Load recent videos from a selected YouTuber."""
+    if not config['youtubers']:
+        log("No YouTubers are being tracked currently.")
+        return
+
+    print("\n--- Load Recent Videos ---")
+    for index, youtuber in enumerate(config['youtubers'], start=1):
+        print(f"{index}. {youtuber['name']}")
+    
+    try:
+        choice = int(input("Select YouTuber (number): "))
+        if not 1 <= choice <= len(config['youtubers']):
+            log("Invalid choice.")
+            return
+
+        num_videos = int(input("How many recent videos to load? "))
+        if num_videos <= 0:
+            log("Invalid number of videos.")
+            return
+
+        youtuber = config['youtubers'][choice - 1]
+        log(f"Loading {num_videos} recent videos for {youtuber['name']}...")
+        
+        feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={youtuber['channel_id']}"
+        feed = feedparser.parse(feed_url)
+        
+        db = DatabaseManager(config['db_path'])
+        channel_id = db.get_or_create_channel(youtuber['channel_id'], youtuber['name'])
+        
+        videos_processed = 0
+        for entry in feed.entries:
+            if videos_processed >= num_videos:
+                break
+                
+            video_id = entry.yt_videoid
+            
+            # Skip if video already exists
+            if db.video_exists(video_id):
+                log(f"Video {video_id} already exists in database, skipping...")
+                continue
+            
+            video_title = entry.title
+            video_published = entry.published
+            
+            # Get thumbnail URL
+            thumbnail_url = None
+            if hasattr(entry, 'media_thumbnail'):
+                thumbnail_url = entry.media_thumbnail[0]['url']
+
+            log(f"Processing video: {video_title}")
+            
+            # Store video
+            db_video_id = db.store_video(
+                video_id, 
+                channel_id, 
+                video_title, 
+                video_published,
+                thumbnail_url=thumbnail_url
+            )
+            
+            # Handle transcript
+            transcript = fetch_transcript(video_id)
+            if transcript:
+                save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
+                db.store_transcript(db_video_id, transcript)
+                
+                # Extract and store topics
+                topics = extract_topics(transcript, client)
+                topic_ids = []
+                for topic in topics:
+                    topic_id = db.get_or_create_topic(topic)
+                    topic_ids.append(topic_id)
+                db.link_video_topics(db_video_id, topic_ids)
+                log(f"Stored {len(topics)} topics for video")
+
+                # Handle summary
+                if youtuber.get('openai_enabled', True):
+                    summary = summarize_text(transcript, youtuber['system_prompt'], client)
+                    if summary:
+                        db.store_summary(db_video_id, summary)
+                    log("Summary stored.")
+            else:
+                log("No transcript available for this video.")
+            
+            videos_processed += 1
+
+        log(f"Finished loading videos for {youtuber['name']}")
+        
+    except ValueError:
+        log("Invalid input. Please enter a number.")
+    except Exception as e:
+        log(f"An error occurred: {str(e)}")
+        traceback.print_exc()
+
 
 def show_menu():
     """Show the main menu."""
@@ -363,7 +459,8 @@ def show_menu():
         print("6. Toggle OpenAI Summarization for a YouTuber")
         print("7. Configure API Keys")
         print("8. Initialize/Rebuild Database")
-        print("9. Exit")
+        print("9. Load Recent Videos")  # New option
+        print("10. Exit")  # Updated number
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -385,7 +482,9 @@ def show_menu():
             db.create_database()
             db.build_schema(config['schema_file_path'])
             log("Database initialized successfully.")
-        elif choice == "9":
+        elif choice == "9":  # New option
+            load_recent_videos(config, openai)
+        elif choice == "10":  # Updated number
             break
         else:
             print("Invalid choice. Please try again.")

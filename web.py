@@ -22,8 +22,20 @@ def nl2br(text):
 @app.route('/')
 def index():
     page = request.args.get('page', 1, type=int)
-    videos = db.get_all_videos(page=page)
-    return render_template('index.html', videos=videos)
+    selected_channels = request.args.getlist('channels', type=int)
+    
+    channels = db.get_all_channels()
+    videos = db.get_all_videos(
+        page=page, 
+        channel_ids=selected_channels if selected_channels else None
+    )
+    
+    return render_template(
+        'index.html', 
+        videos=videos, 
+        channels=channels,
+        selected_channels=selected_channels
+    )
 
 @app.route('/video/<int:video_id>')
 def video_detail(video_id):

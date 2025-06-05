@@ -12,6 +12,35 @@
 {% endblock %}
 
 {% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <form method="get" class="card">
+            <div class="card-body">
+                <h5 class="card-title">Filter by Channel</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for channel in channels %}
+                    <div class="form-check">
+                        <input type="checkbox" 
+                               class="form-check-input" 
+                               name="channels" 
+                               value="{{ channel.id }}"
+                               id="channel{{ channel.id }}"
+                               {% if channel.id in selected_channels %}checked{% endif %}>
+                        <label class="form-check-label" for="channel{{ channel.id }}">
+                            {{ channel.name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary mt-2">Apply Filters</button>
+                {% if selected_channels %}
+                <a href="/" class="btn btn-secondary mt-2">Clear Filters</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="row">
     {% for video in videos %}
     <div class="col-md-6 mb-4">
@@ -21,7 +50,10 @@
             {% endif %}
             <div class="card-body">
                 <h5 class="card-title">{{ video.title }}</h5>
-                <h6 class="card-subtitle mb-2 text-muted">{{ video.channel_name }}</h6>
+                <h6 class="card-subtitle mb-2 text-muted">
+                    {{ video.channel_name }}
+                    <small class="ms-2">{{ video.youtube_created_at.split('T')[0] }}</small>
+                </h6>
                 {% if video.summary %}
                     <p class="card-text">{{ video.summary|truncate(200) }}</p>
                 {% else %}
