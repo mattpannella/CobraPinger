@@ -436,3 +436,25 @@ class DatabaseManager:
             """)
             result = cursor.fetchone()
             return dict(result) if result else None
+
+    def get_latest_video(self):
+        """Get the most recently published video with all its details."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.title,
+                    v.youtube_id,
+                    v.youtube_created_at,
+                    v.thumbnail_url,
+                    c.name as channel_name,
+                    c.id as channel_id
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                ORDER BY v.youtube_created_at DESC
+                LIMIT 1
+            """)
+            result = cursor.fetchone()
+            return dict(result) if result else None

@@ -41,8 +41,9 @@ def index():
         channel_ids=selected_channels if selected_channels else None
     )
     
-    # Get random quote
+    # Get random quote and latest video
     quote = db.get_random_quote()
+    latest_video = db.get_latest_video()
     
     return render_template(
         'index.html', 
@@ -52,7 +53,8 @@ def index():
         current_page=page,
         channels=channels,
         selected_channels=selected_channels,
-        quote=quote
+        quote=quote,
+        latest_video=latest_video
     )
 
 @app.route('/video/<int:video_id>')
