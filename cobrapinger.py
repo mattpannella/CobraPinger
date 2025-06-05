@@ -10,6 +10,7 @@ import sys
 import select
 import re
 import traceback
+import sqlite3
 
 CONFIG_FILE = "config.json"
 
@@ -311,7 +312,8 @@ def show_menu():
         print("5. Remove YouTuber")
         print("6. Toggle OpenAI Summarization for a YouTuber")  # New menu option
         print("7. Configure API Keys")
-        print("8. Exit")
+        print("8. Build Database")
+        print("9. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -329,9 +331,41 @@ def show_menu():
         elif choice == "7":
             configure_api_keys(config)
         elif choice == "8":
+            create_database(config['db_path'])
+            build_schema(config['db_path'], config['schema_file_path'])
+        elif choice == "9":
             break
         else:
             print("Invalid choice. Please try again.")
+
+
+
+def create_database(db_path: str) -> bool:
+    """Creates the SQLite DB file if it doesn't exist."""
+    if os.path.exists(db_path):
+        print(f"Database already exists at {db_path}")
+        return False
+    else:
+        # Just connect to create the file
+        with sqlite3.connect(db_path):
+            pass
+        print(f"Database created at {db_path}")
+        return True
+
+def build_schema(db_path: str, schema_file_path: str) -> None:
+    """Builds the DB schema from a .sql file if the tables don't already exist."""
+    if not os.path.exists(db_path):
+        raise FileNotFoundError(f"Database file not found at {db_path}")
+    
+    if not os.path.exists(schema_file_path):
+        raise FileNotFoundError(f"Schema file not found at {schema_file_path}")
+
+    with sqlite3.connect(db_path) as conn, open(schema_file_path, 'r') as f:
+        schema_sql = f.read()
+        conn.executescript(schema_sql)
+        print(f"Schema applied from {schema_file_path}")
+
+
 
 if __name__ == "__main__":
     import sys
