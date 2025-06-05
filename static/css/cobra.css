@@ -343,3 +343,18 @@ mark {
 .quote-card .blockquote-footer a:hover {
     color: #00cc00;
 }
+
+.cobra-gif img {
+    height: 200px;
+    width: auto;
+    filter: hue-rotate(120deg); /* Makes the gif more green to match theme */
+}
+
+.latest-video {
+    max-width: 800px;
+}
+
+.video-thumb {
+    height: 200px;
+    object-fit: cover;
+}
