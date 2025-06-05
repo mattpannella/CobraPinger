@@ -88,7 +88,7 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT id FROM topic WHERE name = ?",
-                (topic_name.lower(),)  # Store topics in lowercase for consistency
+                (topic_name.lower(),)
             )
             result = cursor.fetchone()
             

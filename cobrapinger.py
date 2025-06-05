@@ -318,7 +318,7 @@ def display_logo():
 
 def extract_topics(text: str, client) -> list[str]:
     """Extract topics from text using OpenAI."""
-    log("Sending transcript to OpenAI for topic extraction...")
+    log("Sending transcript to OpenAI to generate topics list")
     try:
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
@@ -370,12 +370,12 @@ def show_menu():
             toggle_openai_for_youtuber(config)
         elif choice == "7":
             configure_api_keys(config)
-        elif choice == "8":  # New handler
+        elif choice == "8":
             db = DatabaseManager(config['db_path'])
             db.create_database()
             db.build_schema(config['schema_file_path'])
             log("Database initialized successfully.")
-        elif choice == "9":  # Changed to 9
+        elif choice == "9":
             break
         else:
             print("Invalid choice. Please try again.")
