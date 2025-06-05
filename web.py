@@ -36,11 +36,7 @@ def index():
     quote = db.get_random_quote()
     latest_video = db.get_latest_video()
     
-    return render_template(
-        'index.html',
-        quote=quote,
-        latest_video=latest_video
-    )
+    return render_template('index.html', active_page='home', quote=quote, latest_video=latest_video)
 
 @app.route('/videos')
 def videos():
@@ -57,16 +53,7 @@ def videos():
     # Get random quote
     quote = db.get_random_quote()
     
-    return render_template(
-        'videos.html', 
-        videos=result['videos'],
-        total=result['total'],
-        pages=result['pages'],
-        current_page=page,
-        channels=channels,
-        selected_channels=selected_channels,
-        quote=quote  # Add quote to template context
-    )
+    return render_template('videos.html', active_page='videos', videos=result['videos'], total=result['total'], pages=result['pages'], current_page=page, channels=channels, selected_channels=selected_channels, quote=quote)
 
 @app.route('/video/<int:video_id>')
 def video_detail(video_id):
@@ -140,24 +127,13 @@ def calendar_view(year=None, month=None):
     next_month = month % 12 + 1
     next_year = year + (1 if month == 12 else 0)
     
-    return render_template(
-        'calendar.html',
-        calendar=cal,
-        video_map=video_map,
-        month=month,
-        month_name=month_name,
-        year=year,
-        prev_month=prev_month,
-        prev_year=prev_year,
-        next_month=next_month,
-        next_year=next_year
-    )
+    return render_template('calendar.html', active_page='calendar', calendar=cal, video_map=video_map, month=month, month_name=month_name, year=year, prev_month=prev_month, prev_year=prev_year, next_month=next_month, next_year=next_year)
 
 @app.route('/topics')
 def topic_cloud():
     """Show all topics in a tag cloud."""
     topics = db.get_topic_counts()  # We'll create this method
-    return render_template('topics.html', topics=topics)
+    return render_template('topics.html', active_page='topics', topics=topics)
 
 @app.template_filter('formatdate')
 def formatdate(date_str):

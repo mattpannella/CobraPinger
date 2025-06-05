@@ -18,16 +18,16 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
+                        <a class="nav-link {% if active_page == 'home' %}active{% endif %}" href="/">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/videos">Videos</a>
+                        <a class="nav-link {% if active_page == 'videos' %}active{% endif %}" href="/videos">Videos</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/calendar">Calendar</a>
+                        <a class="nav-link {% if active_page == 'calendar' %}active{% endif %}" href="/calendar">Calendar</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/topics">Topics</a>
+                        <a class="nav-link {% if active_page == 'topics' %}active{% endif %}" href="/topics">Topics</a>
                     </li>
                 </ul>
                 <form class="d-flex" action="/search" method="get">
