@@ -1,6 +1,5 @@
 import sqlite3
 import os
-from typing import Optional
 
 class DatabaseManager:
     def __init__(self, db_path: str):
@@ -31,7 +30,7 @@ class DatabaseManager:
             print(f"Schema applied from {schema_file_path}")
 
     def get_or_create_channel(self, youtube_id: str, name: str) -> int:
-        """Get channel ID from database or create if not exists."""
+        """Get channel ID from database or create if it doesn't exist yet"""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -80,5 +79,35 @@ class DatabaseManager:
             cursor.execute(
                 "INSERT INTO summary (video_id, content) VALUES (?, ?)",
                 (video_id, content)
+            )
+            conn.commit()
+
+    def get_or_create_topic(self, topic_name: str) -> int:
+        """Get topic ID from database or create if not exists."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id FROM topic WHERE name = ?",
+                (topic_name.lower(),)  # Store topics in lowercase for consistency
+            )
+            result = cursor.fetchone()
+            
+            if result:
+                return result[0]
+            
+            cursor.execute(
+                "INSERT INTO topic (name) VALUES (?)",
+                (topic_name.lower(),)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def link_video_topics(self, video_id: int, topic_ids: list[int]) -> None:
+        """Link a video to multiple topics."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executemany(
+                "INSERT OR IGNORE INTO video_topic (video_id, topic_id) VALUES (?, ?)",
+                [(video_id, topic_id) for topic_id in topic_ids]
             )
             conn.commit()

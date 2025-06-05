@@ -160,6 +160,15 @@ def run_program_once(config, client):
                     save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
                     db.store_transcript(db_video_id, transcript)
                     
+                    # Extract and store topics
+                    topics = extract_topics(transcript, client)
+                    topic_ids = []
+                    for topic in topics:
+                        topic_id = db.get_or_create_topic(topic)
+                        topic_ids.append(topic_id)
+                    db.link_video_topics(db_video_id, topic_ids)
+                    log(f"Stored {len(topics)} topics for video")
+
                     # Handle summary
                     if youtuber.get('openai_enabled', True):
                         summary = summarize_text(transcript, youtuber['system_prompt'], client)
@@ -361,3 +370,23 @@ if __name__ == "__main__":
         run_program_continuously(config, openai)
     else:
         show_menu()
+
+def extract_topics(text: str, client) -> list[str]:
+    """Extract topics from text using OpenAI."""
+    log("Sending transcript to OpenAI for topic extraction...")
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4-mini",
+            messages=[
+                {"role": "system", "content": "You are a topic extraction expert. Extract 3-5 main topics from the given text. Each topic should be a single word or short phrase (max 3 words). Respond with only the topics, one per line, no numbers or bullet points. Examples of good topics: 'AI Ethics', 'Game Design', 'Climate Change', 'Unity Engine', 'Mobile Gaming'."},
+                {"role": "user", "content": f"Extract the main topics from this transcript:\n\n{text}"}
+            ],
+            max_tokens=100,
+            temperature=0.3,
+        )
+        topics = response.choices[0].message.content.strip().split('\n')
+        log(f"Extracted {len(topics)} topics")
+        return topics
+    except Exception as e:
+        log(f"Could not extract topics: {e}")
+        return []
