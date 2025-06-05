@@ -316,6 +316,26 @@ def display_logo():
     ascii_art = pyfiglet.figlet_format("COBRAPINGER", font="slant")
     print(ascii_art)
 
+def extract_topics(text: str, client) -> list[str]:
+    """Extract topics from text using OpenAI."""
+    log("Sending transcript to OpenAI for topic extraction...")
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a topic extraction expert. Extract 3-5 main topics from the given text. Each topic should be a single word or short phrase (max 3 words). Respond with only the topics, one per line, no numbers or bullet points. Examples of good topics: 'AI Ethics', 'Game Design', 'Climate Change', 'Unity Engine', 'Mobile Gaming'."},
+                {"role": "user", "content": f"Extract the main topics from this transcript:\n\n{text}"}
+            ],
+            max_tokens=100,
+            temperature=0.3,
+        )
+        topics = response.choices[0].message.content.strip().split('\n')
+        log(f"Extracted {len(topics)} topics")
+        return topics
+    except Exception as e:
+        log(f"Could not extract topics: {e}")
+        return []
+
 def show_menu():
     """Show the main menu."""
     config = load_config()
@@ -370,23 +390,3 @@ if __name__ == "__main__":
         run_program_continuously(config, openai)
     else:
         show_menu()
-
-def extract_topics(text: str, client) -> list[str]:
-    """Extract topics from text using OpenAI."""
-    log("Sending transcript to OpenAI for topic extraction...")
-    try:
-        response = openai.chat.completions.create(
-            model="gpt-4-mini",
-            messages=[
-                {"role": "system", "content": "You are a topic extraction expert. Extract 3-5 main topics from the given text. Each topic should be a single word or short phrase (max 3 words). Respond with only the topics, one per line, no numbers or bullet points. Examples of good topics: 'AI Ethics', 'Game Design', 'Climate Change', 'Unity Engine', 'Mobile Gaming'."},
-                {"role": "user", "content": f"Extract the main topics from this transcript:\n\n{text}"}
-            ],
-            max_tokens=100,
-            temperature=0.3,
-        )
-        topics = response.choices[0].message.content.strip().split('\n')
-        log(f"Extracted {len(topics)} topics")
-        return topics
-    except Exception as e:
-        log(f"Could not extract topics: {e}")
-        return []
