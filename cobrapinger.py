@@ -146,13 +146,23 @@ def run_program_once(config, client):
             video_id = new_video.yt_videoid
             video_title = new_video.title
             video_published = new_video.published
+            
+            # Get thumbnail URL from RSS feed
+            thumbnail_url = None
+            if hasattr(new_video, 'media_thumbnail'):
+                thumbnail_url = new_video.media_thumbnail[0]['url']
 
             if not any(video['id'] == video_id for video in last_video_data):
                 log(f"New video detected with ID: {video_id}")
                 
-                # Store channel and video in database
                 channel_id = db.get_or_create_channel(youtuber['channel_id'], youtuber['name'])
-                db_video_id = db.store_video(video_id, channel_id, video_title)
+                db_video_id = db.store_video(
+                    video_id, 
+                    channel_id, 
+                    video_title, 
+                    video_published,
+                    thumbnail_url=thumbnail_url
+                )
                 
                 # Handle transcript
                 transcript = fetch_transcript(video_id)

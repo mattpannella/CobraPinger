@@ -49,14 +49,15 @@ class DatabaseManager:
             conn.commit()
             return cursor.lastrowid
 
-    def store_video(self, youtube_id: str, channel_id: int, title: str) -> int:
+    def store_video(self, youtube_id: str, channel_id: int, title: str, published_date: str, thumbnail_url: str = None) -> int:
         """Store video in database and return its ID."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "INSERT OR IGNORE INTO video (youtube_id, channel_id, title) VALUES (?, ?, ?)",
-                (youtube_id, channel_id, title)
-            )
+            cursor.execute("""
+                INSERT OR IGNORE INTO video 
+                (youtube_id, channel_id, title, youtube_created_at, thumbnail_url) 
+                VALUES (?, ?, ?, ?, ?)
+            """, (youtube_id, channel_id, title, published_date, thumbnail_url))
             conn.commit()
             
             cursor.execute("SELECT id FROM video WHERE youtube_id = ?", (youtube_id,))
@@ -123,11 +124,12 @@ class DatabaseManager:
                     v.youtube_id,
                     v.title,
                     c.name as channel_name,
-                    s.content as summary
+                    s.content as summary,
+                    v.thumbnail_url
                 FROM video v
                 JOIN channel c ON v.channel_id = c.id
                 LEFT JOIN summary s ON v.id = s.video_id
-                ORDER BY v.id DESC
+                ORDER BY v.youtube_created_at DESC
                 LIMIT ? OFFSET ?
             """, (per_page, offset))
             return cursor.fetchall()
