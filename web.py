@@ -32,6 +32,19 @@ def nl2br(text):
 
 @app.route('/')
 def index():
+    """Welcome page with latest video and random quote."""
+    quote = db.get_random_quote()
+    latest_video = db.get_latest_video()
+    
+    return render_template(
+        'index.html',
+        quote=quote,
+        latest_video=latest_video
+    )
+
+@app.route('/videos')
+def videos():
+    """Video listing page with filters."""
     page = request.args.get('page', 1, type=int)
     selected_channels = request.args.getlist('channels', type=int)
     
@@ -41,20 +54,18 @@ def index():
         channel_ids=selected_channels if selected_channels else None
     )
     
-    # Get random quote and latest video
+    # Get random quote
     quote = db.get_random_quote()
-    latest_video = db.get_latest_video()
     
     return render_template(
-        'index.html', 
+        'videos.html', 
         videos=result['videos'],
         total=result['total'],
         pages=result['pages'],
         current_page=page,
         channels=channels,
         selected_channels=selected_channels,
-        quote=quote,
-        latest_video=latest_video
+        quote=quote  # Add quote to template context
     )
 
 @app.route('/video/<int:video_id>')
@@ -147,6 +158,17 @@ def topic_cloud():
     """Show all topics in a tag cloud."""
     topics = db.get_topic_counts()  # We'll create this method
     return render_template('topics.html', topics=topics)
+
+@app.template_filter('formatdate')
+def formatdate(date_str):
+    """Format ISO date string to human readable format."""
+    if not date_str:
+        return ""
+    try:
+        date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        return date.strftime('%B %d, %Y')  # Example: January 1, 2024
+    except ValueError:
+        return date_str
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9595, debug=True)
