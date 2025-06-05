@@ -332,3 +332,45 @@ class DatabaseManager:
             """, (date_pattern,))
             
             return [dict(row) for row in cursor.fetchall()]
+
+    def get_videos_without_transcript(self) -> list:
+        """Get all videos that don't have transcripts."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.youtube_id,
+                    v.title,
+                    c.name as channel_name,
+                    c.id as channel_id,
+                    v.youtube_created_at
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                LEFT JOIN transcript t ON v.id = t.video_id
+                WHERE t.content IS NULL
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_videos_without_summary(self) -> list:
+        """Get all videos that have transcripts but no summaries."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.youtube_id,
+                    v.title,
+                    c.name as channel_name,
+                    c.id as channel_id,
+                    v.youtube_created_at,
+                    t.content as transcript
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                JOIN transcript t ON v.id = t.video_id
+                LEFT JOIN summary s ON v.id = s.video_id
+                WHERE s.content IS NULL
+            """)
+            return [dict(row) for row in cursor.fetchall()]

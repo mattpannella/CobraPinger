@@ -487,6 +487,149 @@ def load_recent_videos(config, client):
         traceback.print_exc()
 
 
+def reprocess_missing_transcripts(config, client):
+    """Reprocess videos that are missing transcripts."""
+    db = DatabaseManager(config['db_path'])
+    videos = db.get_videos_without_transcript()
+    
+    if not videos:
+        log("No videos found missing transcripts.")
+        return
+        
+    log(f"Found {len(videos)} videos missing transcripts.")
+    process_all = input("Process all videos? (y/n): ").lower() == 'y'
+    
+    for video in videos:
+        if not process_all:
+            process = input(f"\nProcess '{video['title']}' from {video['channel_name']}? (y/n/all/q): ").lower()
+            if process == 'q':
+                break
+            elif process == 'all':
+                process_all = True
+            elif process != 'y':
+                continue
+                
+        log(f"Processing video: {video['title']}")
+        
+        # Get transcript
+        transcript = fetch_transcript(video['youtube_id'])
+        if transcript:
+            save_transcript_to_file(transcript, video['channel_name'], video['title'], video['youtube_created_at'])
+            db.store_transcript(video['id'], transcript)
+            
+            # Extract and store topics
+            topics = extract_topics(transcript, client)
+            topic_ids = []
+            for topic in topics:
+                topic_id = db.get_or_create_topic(topic)
+                topic_ids.append(topic_id)
+            db.link_video_topics(video['id'], topic_ids)
+            log(f"Stored {len(topics)} topics for video")
+            
+            # Get channel's system prompt
+            channel_config = next(
+                (y for y in config['youtubers'] if y['channel_id'] == str(video['channel_id'])), 
+                None
+            )
+            
+            if channel_config and channel_config.get('openai_enabled', True):
+                summary = summarize_text(transcript, channel_config['system_prompt'], client)
+                if summary:
+                    db.store_summary(video['id'], summary)
+                    log("Summary stored.")
+            
+            log("Video processing complete.")
+        else:
+            log("Could not retrieve transcript.")
+            
+    log("Finished reprocessing videos.")
+
+def reprocess_missing_content(config, client):
+    """Reprocess videos that are missing transcripts or summaries."""
+    db = DatabaseManager(config['db_path'])
+    videos_no_transcript = db.get_videos_without_transcript()
+    videos_no_summary = db.get_videos_without_summary()
+    
+    if not videos_no_transcript and not videos_no_summary:
+        log("No videos found missing content.")
+        return
+        
+    if videos_no_transcript:
+        log(f"\nFound {len(videos_no_transcript)} videos missing transcripts.")
+        process_all = input("Process all videos missing transcripts? (y/n): ").lower() == 'y'
+        
+        for video in videos_no_transcript:
+            if not process_all:
+                process = input(f"\nProcess '{video['title']}' from {video['channel_name']}? (y/n/all/q): ").lower()
+                if process == 'q':
+                    break
+                elif process == 'all':
+                    process_all = True
+                elif process != 'y':
+                    continue
+                    
+            log(f"Processing video: {video['title']}")
+            
+            transcript = fetch_transcript(video['youtube_id'])
+            if transcript:
+                save_transcript_to_file(transcript, video['channel_name'], video['title'], video['youtube_created_at'])
+                db.store_transcript(video['id'], transcript)
+                
+                # Extract and store topics
+                topics = extract_topics(transcript, client)
+                topic_ids = []
+                for topic in topics:
+                    topic_id = db.get_or_create_topic(topic)
+                    topic_ids.append(topic_id)
+                db.link_video_topics(video['id'], topic_ids)
+                log(f"Stored {len(topics)} topics for video")
+                
+                # Get channel's system prompt and generate summary
+                channel_config = next(
+                    (y for y in config['youtubers'] if y['channel_id'] == str(video['channel_id'])), 
+                    None
+                )
+                
+                if channel_config and channel_config.get('openai_enabled', True):
+                    summary = summarize_text(transcript, channel_config['system_prompt'], client)
+                    if summary:
+                        db.store_summary(video['id'], summary)
+                        log("Summary stored.")
+                
+                log("Video processing complete.")
+            else:
+                log("Could not retrieve transcript.")
+    
+    if videos_no_summary:
+        log(f"\nFound {len(videos_no_summary)} videos missing summaries.")
+        process_all = input("Process all videos missing summaries? (y/n): ").lower() == 'y'
+        
+        for video in videos_no_summary:
+            if not process_all:
+                process = input(f"\nProcess summary for '{video['title']}' from {video['channel_name']}? (y/n/all/q): ").lower()
+                if process == 'q':
+                    break
+                elif process == 'all':
+                    process_all = True
+                elif process != 'y':
+                    continue
+                    
+            log(f"Generating summary for: {video['title']}")
+            
+            # Get channel's system prompt
+            channel_config = next(
+                (y for y in config['youtubers'] if y['channel_id'] == str(video['channel_id'])), 
+                None
+            )
+            
+            if channel_config and channel_config.get('openai_enabled', True):
+                summary = summarize_text(video['transcript'], channel_config['system_prompt'], client)
+                if summary:
+                    db.store_summary(video['id'], summary)
+                    log("Summary stored.")
+            
+    log("Finished reprocessing videos.")
+
 def show_menu():
     """Show the main menu."""
     config = load_config()
@@ -505,7 +648,8 @@ def show_menu():
         print("7. Configure API Keys")
         print("8. Initialize/Rebuild Database")
         print("9. Load Recent Videos")
-        print("10. Exit")
+        print("10. Reprocess Missing Content")
+        print("11. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -530,6 +674,8 @@ def show_menu():
         elif choice == "9":
             load_recent_videos(config, openai)
         elif choice == "10":
+            reprocess_missing_content(config, openai)
+        elif choice == "11":
             break
         else:
             print("Invalid choice. Please try again.")
