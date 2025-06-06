@@ -39,6 +39,23 @@ body {
     border-color: #00ff00;
 }
 
+.btn-link {
+    color: #00ff00;
+    text-decoration: none;
+}
+
+.btn-link:hover {
+    color: #00cc00;
+}
+
+.btn-link.collapsed {
+    color: #00ff00;
+}
+
+.btn-link:not(.collapsed) {
+    color: #00cc00;
+}
+
 .badge {
     background-color: #006600 !important;
 }
