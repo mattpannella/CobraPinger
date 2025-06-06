@@ -335,7 +335,7 @@ def extract_topics(text: str, client, existing_topics: list[str] = None) -> list
     try:
         # Format existing topics for the prompt
         topics_list = "\n".join(existing_topics) if existing_topics else "No existing topics."
-        log(f"Existing topics: {topics_list}")
+
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
