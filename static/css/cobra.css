@@ -390,6 +390,7 @@ mark {
 }
 
 .latest-video-link:hover h4 {
+    color: #00ff00;
     text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
 }
 
@@ -408,4 +409,33 @@ mark {
 .navbar-logo {
     height: 30px;
     width: auto;
+}
+
+.video-card {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.video-card:hover {
+    text-decoration: none;
+    transform: translateY(-5px);
+}
+
+.video-card:hover h5 {
+    color: #00ff00;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.video-card .card {
+    height: 100%;
+}
+
+.video-card .summary-preview {
+    color: #888;
+}
+
+.video-card:hover .summary-preview {
+    color: #999;
 }
