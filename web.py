@@ -1,14 +1,20 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from database import DatabaseManager
 import markdown
 import re
 from datetime import datetime
 import calendar
+from werkzeug.security import generate_password_hash, check_password_hash
+import sqlite3
+import functools
 
 app = Flask(__name__, static_folder='static')
 
 # Add min function to Jinja globals
 app.jinja_env.globals.update(min=min)
+
+# Add secret key for sessions
+app.secret_key = 'your-secret-key-here'  # Change this to a secure random key
 
 db = DatabaseManager('db.sqlite')
 
@@ -56,11 +62,18 @@ def videos():
     return render_template('videos.html', active_page='videos', videos=result['videos'], total=result['total'], pages=result['pages'], current_page=page, channels=channels, selected_channels=selected_channels, quote=quote)
 
 @app.route('/video/<int:video_id>')
-def video_detail(video_id):
+def video_details(video_id):  # Changed function name to be more descriptive
     video = db.get_video_details(video_id)
-    if video:
-        return render_template('video.html', video=video)
-    return "Video not found", 404
+    if not video:
+        abort(404)
+    
+    comments = db.get_video_comments(video_id)
+    can_comment = session.get('user_id') and db.can_user_comment(session['user_id'])
+    
+    return render_template('video.html', 
+                         video=video, 
+                         comments=comments,
+                         can_comment=can_comment)
 
 @app.route('/search')
 def search():
@@ -145,6 +158,93 @@ def formatdate(date_str):
         return date.strftime('%B %d, %Y')  # Example: January 1, 2024
     except ValueError:
         return date_str
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        invite_code = request.form['invite_code']
+
+        # Validate invite code
+        if not db.validate_invite_code(invite_code):
+            return render_template('register.html', error='Invalid or used invite code')
+
+        # Basic validation
+        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            return render_template('register.html', error='Username can only contain letters, numbers, and underscores')
+        
+        if len(password) < 8:
+            return render_template('register.html', error='Password must be at least 8 characters')
+
+        try:
+            # Create user
+            password_hash = generate_password_hash(password)
+            user_id = db.create_user(username, email, password_hash)
+            
+            # Mark invite code as used
+            db.mark_invite_code_used(invite_code)
+            
+            # TODO: Set up user session
+            return redirect(url_for('index'))
+        except sqlite3.IntegrityError:
+            return render_template('register.html', error='Username or email already exists')
+        
+    return render_template('register.html')
+
+# Login decorator
+def login_required(f):
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = db.get_user_by_username(username)
+        
+        if user and check_password_hash(user['password_hash'], password):
+            session['user_id'] = user['id']
+            return redirect(url_for('index'))
+        
+        return render_template('login.html', error='Invalid username or password')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    return redirect(url_for('index'))
+
+@app.route('/video/<int:video_id>/comment', methods=['POST'])
+@login_required
+def add_comment(video_id):
+    if not db.can_user_comment(session['user_id']):
+        flash('You can only post one comment per 5 min.', 'error')
+        return redirect(url_for('video_details', video_id=video_id))  # Updated to match route name
+        
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Comment cannot be empty.', 'error')
+        return redirect(url_for('video_details', video_id=video_id))  # Updated to match route name
+        
+    db.add_comment(session['user_id'], video_id, content)
+    return redirect(url_for('video_details', video_id=video_id))  # Updated to match route name
+
+@app.context_processor
+def inject_user():
+    """Inject user info into templates."""
+    if 'user_id' in session:
+        user = db.get_user_by_id(session['user_id'])
+        return dict(user=user)
+    return dict()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9595, debug=True)

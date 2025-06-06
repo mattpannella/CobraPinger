@@ -39,6 +39,15 @@
                     <input class="form-control me-2" type="search" name="q" placeholder="Search transcripts..." aria-label="Search">
                     <button class="btn btn-outline-light" type="submit">Search</button>
                 </form>
+                <div class="navbar-nav ms-auto">
+                    {% if session.user_id %}
+                        <span class="nav-item nav-link">Welcome, {{ user.username }}</span>
+                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                    {% else %}
+                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                        <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>

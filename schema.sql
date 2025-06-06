@@ -63,3 +63,27 @@ CREATE TABLE IF NOT EXIST quote {
     content TEXT NOT NULL,
     FOREIGN KEY (video_id) REFERENCES video(id)
 }
+
+CREATE TABLE IF NOT EXISTS invite_code {
+    id INTEGER PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+}
+
+CREATE TABLE IF NOT EXISTS user (
+    id INTEGER PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS video_comment (
+    user_id INTEGER NOT NULL,
+    video_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    FOREIGN KEY (video_id) REFERENCES video(id)
+);

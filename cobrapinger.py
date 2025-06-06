@@ -13,6 +13,7 @@ import traceback
 from database import DatabaseManager
 from googleapiclient.discovery import build
 
+
 CONFIG_FILE = "config.json"
 
 def sanitize_filename(filename):
@@ -731,7 +732,8 @@ def show_menu():
         print("9. Load Recent Videos")
         print("10. Reprocess Missing Content")
         print("11. Regenerate All Topics")
-        print("12. Exit")
+        print("12. Generate invite code")
+        print("13. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -760,10 +762,12 @@ def show_menu():
         elif choice == "11":
             regenerate_all_topics(config, openai)
         elif choice == "12":
+            db = DatabaseManager(config['db_path'])
+            log(db.generate_invite_code())
+        elif choice == "13":
             break
         else:
             print("Invalid choice. Please try again.")
-
 
 if __name__ == "__main__":
     import sys

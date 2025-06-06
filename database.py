@@ -1,7 +1,7 @@
 import sqlite3
 import os
 import re
-
+import secrets
 class DatabaseManager:
     def __init__(self, db_path: str):
         self.db_path = db_path
@@ -558,3 +558,114 @@ class DatabaseManager:
             cursor.execute("SELECT COUNT(*) FROM topic")
             count = cursor.fetchone()[0]
             return count
+
+    def validate_invite_code(self, code: str) -> bool:
+        """Check if invite code is valid and unused."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id FROM invite_code WHERE code = ? AND used = 0",
+                (code,)
+            )
+            return cursor.fetchone() is not None
+
+    def mark_invite_code_used(self, code: str) -> None:
+        """Mark an invite code as used."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE invite_code SET used = 1 WHERE code = ?",
+                (code,)
+            )
+            conn.commit()
+
+    def create_user(self, username: str, email: str, password_hash: str) -> int:
+        """Create a new user and return their ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO user (username, email, password_hash) VALUES (?, ?, ?)",
+                (username, email, password_hash)
+            )
+            conn.commit()
+            return cursor.lastrowid
+        
+    def generate_invite_code(self) -> str:
+        """Generate a new invite code."""
+        code = secrets.token_urlsafe(16)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO invite_code (code) VALUES (?)",
+                (code,)
+            )
+            conn.commit()
+        
+        return code
+    
+    def get_user_by_username(self, username: str):
+        """Get user by username."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, username, email, password_hash FROM user WHERE username = ?",
+                (username,)
+            )
+            result = cursor.fetchone()
+            return dict(result) if result else None
+
+    def get_user_by_id(self, user_id: int):
+        """Get user by ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, username, email FROM user WHERE id = ?",
+                (user_id,)
+            )
+            result = cursor.fetchone()
+            return dict(result) if result else None
+
+    def can_user_comment(self, user_id: int) -> bool:
+        """Check if user can comment (5 minute rate limit)."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM video_comment 
+                WHERE user_id = ? 
+                AND datetime(created_at) > datetime('now', '-5 minutes')
+            """, (user_id,))
+            count = cursor.fetchone()[0]
+            return count == 0
+
+    def add_comment(self, user_id: int, video_id: int, content: str) -> bool:
+        """Add a comment if user is within rate limit."""
+        if not self.can_user_comment(user_id):
+            return False
+            
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO video_comment (user_id, video_id, content) VALUES (?, ?, ?)",
+                (user_id, video_id, content)
+            )
+            conn.commit()
+            return True
+
+    def get_video_comments(self, video_id: int):
+        """Get all comments for a video with user info."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    c.*,
+                    u.username
+                FROM video_comment c
+                JOIN user u ON c.user_id = u.id
+                WHERE c.video_id = ?
+                ORDER BY c.created_at DESC
+            """, (video_id,))
+            return [dict(row) for row in cursor.fetchall()]
