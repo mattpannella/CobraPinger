@@ -14,6 +14,9 @@
                     {% if error %}
                     <div class="alert alert-danger">{{ error }}</div>
                     {% endif %}
+                    {% if success %}
+                    <div class="alert alert-success">{{ success }}</div>
+                    {% endif %}
                     <form method="POST">
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
@@ -33,6 +36,13 @@
                         </div>
                         <button type="submit" class="btn btn-primary">Register</button>
                     </form>
+                    <hr>
+                    <div class="text-center">
+                        <p>Need an invite code?</p>
+                        <form method="POST" action="{{ url_for('request_invite') }}">
+                            <button type="submit" class="btn btn-success">Request Invite Code</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

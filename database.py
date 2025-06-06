@@ -590,8 +590,22 @@ class DatabaseManager:
             conn.commit()
             return cursor.lastrowid
         
-    def generate_invite_code(self) -> str:
-        """Generate a new invite code."""
+    def can_generate_invite_code(self, daily_limit: int = 30) -> bool:
+        """Check if we can generate more invite codes today."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM invite_code 
+                WHERE date(created_at) = date('now')
+            """)
+            count = cursor.fetchone()[0]
+            return count < daily_limit
+
+    def generate_invite_code(self, daily_limit: int = 30) -> tuple[bool, str]:
+        """Generate a new invite code if within daily limit."""
+        if not self.can_generate_invite_code(daily_limit):
+            return False, "Daily invite code limit reached"
+        
         code = secrets.token_urlsafe(16)
         
         with sqlite3.connect(self.db_path) as conn:
@@ -602,7 +616,7 @@ class DatabaseManager:
             )
             conn.commit()
         
-        return code
+        return True, code
     
     def get_user_by_username(self, username: str):
         """Get user by username."""

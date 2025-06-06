@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, get_flashed_messages
 from database import DatabaseManager
+from cobrapinger import load_config
 import markdown
 import re
 from datetime import datetime
@@ -9,12 +10,11 @@ import sqlite3
 import functools
 
 app = Flask(__name__, static_folder='static')
+app.secret_key = 'your-secret-key-here'  # Change this to a secure random key
+config = load_config()
 
 # Add min function to Jinja globals
 app.jinja_env.globals.update(min=min)
-
-# Add secret key for sessions
-app.secret_key = 'your-secret-key-here'  # Change this to a secure random key
 
 db = DatabaseManager('db.sqlite')
 
@@ -159,6 +159,20 @@ def formatdate(date_str):
     except ValueError:
         return date_str
 
+@app.route('/request-invite', methods=['POST'])
+def request_invite():
+    # Get daily limit from config
+    daily_limit = config.get('daily_invite_limit', 30)
+    
+    success, result = db.generate_invite_code(daily_limit)
+    
+    if success:
+        flash(f'Your invite code is: {result}', 'success')
+    else:
+        flash(result, 'error')
+    
+    return redirect(url_for('register'))
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -191,7 +205,13 @@ def register():
         except sqlite3.IntegrityError:
             return render_template('register.html', error='Username or email already exists')
         
-    return render_template('register.html')
+    # Get flashed messages for template
+    error = get_flashed_messages(category_filter=['error'])
+    success = get_flashed_messages(category_filter=['success'])
+    
+    return render_template('register.html', 
+                         error=error[0] if error else None,
+                         success=success[0] if success else None)
 
 # Login decorator
 def login_required(f):

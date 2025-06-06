@@ -493,3 +493,13 @@ mark {
     --bs-btn-active-bg: #004400;
     --bs-btn-active-border-color: #00ff00;
 }
+
+.alert-success {
+    background-color: rgba(0, 255, 0, 0.1);
+    border-color: #00ff00;
+    color: #00ff00;
+}
+
+.alert-success hr {
+    border-top-color: #00ff00;
+}
