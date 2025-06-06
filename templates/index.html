@@ -27,7 +27,7 @@
         <div class="card-body">
             <div class="d-flex justify-content-center align-items-center">
                 <div class="cobra-gif">
-                    <img src="{{ url_for('static', filename='images/cobra.gif') }}" alt="Cobra">
+                    <img class="img-fluid" src="{{ url_for('static', filename='images/cobra.gif') }}" alt="Cobra">
                 </div>
                 <a href="/video/{{ latest_video.id }}" class="latest-video-link">
                     <div class="latest-video mx-4">
@@ -47,7 +47,7 @@
                     </div>
                 </a>
                 <div class="cobra-gif cobra-flip">
-                    <img src="{{ url_for('static', filename='images/cobra.gif') }}" alt="Cobra">
+                    <img class="img-fluid" src="{{ url_for('static', filename='images/cobra.gif') }}" alt="Cobra">
                 </div>
             </div>
         </div>
