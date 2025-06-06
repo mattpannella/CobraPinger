@@ -488,3 +488,73 @@ class DatabaseManager:
             """)
             result = cursor.fetchone()
             return dict(result) if result else None
+
+    def get_all_videos_with_transcripts(self):
+        """Get all videos that have transcripts."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    v.id,
+                    v.title,
+                    v.youtube_id,
+                    t.content as transcript
+                FROM video v
+                JOIN transcript t ON v.id = t.video_id
+                ORDER BY v.youtube_created_at DESC
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def clear_all_topics(self):
+        """Remove all topic links and topics."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            # Clear the mapping table first (due to foreign key constraints)
+            cursor.execute("DELETE FROM video_topic")
+            # Then clear the topics table
+            cursor.execute("DELETE FROM topic")
+            conn.commit()
+
+    def get_all_topics(self):
+        """Get all existing topics."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM topic ORDER BY name")
+            return [row[0] for row in cursor.fetchall()]
+
+    def clear_topic_links(self):
+        """Clear only the video-topic mappings, keeping the topics themselves."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM video_topic")
+            conn.commit()
+
+    def seed_topics(self):
+        """Seed the topic table with predefined topics."""
+        seed_topics = [
+            "food hacks", "beer", "alcohol", "mead", "trolls", 
+            "jessica boyle", "guitar", "ozzy osbourne", "magic", 
+            "gender relations", "politics", "puff", "warlord", 
+            "drink combos", "bacon", "youtube", "food review", 
+            "drink review", "wand making", "jokes", "farting", 
+            "video response", "music"
+        ]
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            # First clear existing topics
+            cursor.execute("DELETE FROM video_topic")
+            cursor.execute("DELETE FROM topic")
+            
+            # Insert seed topics
+            cursor.executemany(
+                "INSERT INTO topic (name) VALUES (?)",
+                [(topic.lower(),) for topic in seed_topics]
+            )
+            conn.commit()
+            
+            # Verify count
+            cursor.execute("SELECT COUNT(*) FROM topic")
+            count = cursor.fetchone()[0]
+            return count

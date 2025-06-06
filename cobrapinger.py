@@ -329,15 +329,35 @@ def display_logo():
     ascii_art = pyfiglet.figlet_format("COBRAPINGER", font="slant")
     print(ascii_art)
 
-def extract_topics(text: str, client) -> list[str]:
+def extract_topics(text: str, client, existing_topics: list[str] = None) -> list[str]:
     """Extract topics from text using OpenAI."""
     log("Sending transcript to OpenAI to generate topics list")
     try:
+        # Format existing topics for the prompt
+        topics_list = "\n".join(existing_topics) if existing_topics else "No existing topics."
+        log(f"Existing topics: {topics_list}")
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a topic extraction expert. Extract 3-5 main topics from the given text. Each topic should be a single word or short phrase (max 3 words). Respond with only the topics, one per line, no numbers or bullet points. Examples of good topics: 'Prosciutto', 'food hacks', 'dark magic', 'gender relations', 'wand making'."},
-                {"role": "user", "content": f"Extract the main topics from this transcript:\n\n{text}"}
+                {"role": "system", "content": """You are a topic extraction expert. Extract 3-5 main topics from the given text.
+                If a topic is similar to one in the existing topics list, use the existing topic name instead of creating a new one.
+                Only create new topics if they represent significantly different concepts.
+                
+                Each topic should be a single word when possible, maximum 2-3 words only when absolutely necessary.
+                Respond with only the topics, one per line, no numbers or bullet points.
+                 
+                Be sure to consolidate with the existing topics list. Drink combos and drink combinations shouldn't both exist, for exxample.
+                
+                Example:
+                If "cooking" exists in the topics list, use that instead of creating "food preparation" or "recipe making".
+                If "beer" exists, use that instead of creating "beer tasting" or "craft beer"."""},
+                {"role": "user", "content": f"""Here are the existing topics to choose from when possible:
+
+{topics_list}
+
+Extract the main topics from this transcript, from a video made by the youtuber KingCobraJFS:
+
+{text}"""}
             ],
             max_tokens=100,
             temperature=0.3,
@@ -646,6 +666,51 @@ def reprocess_missing_content(config, client):
                     
     log("Finished reprocessing videos.")
 
+def regenerate_all_topics(config, client):
+    """Clear and regenerate topics for all videos in the database."""
+    db = DatabaseManager(config['db_path'])
+    
+    # Get all videos with transcripts
+    videos = db.get_all_videos_with_transcripts()
+    
+    if not videos:
+        log("No videos found with transcripts.")
+        return
+        
+    log(f"Found {len(videos)} videos.")
+    
+    confirm = input("This will delete ALL existing topic links and regenerate them. Continue? (y/n): ").lower()
+    if confirm != 'y':
+        log("Operation cancelled.")
+        return
+    
+    # Clear all topics
+    db.seed_topics()
+    log("Cleared existing topic links.")
+    
+    for video in videos:
+        log(f"Processing: {video['title']}")
+        
+        try:
+            existing_topics = db.get_all_topics()
+            # Extract new topics, passing existing topics list
+            topics = extract_topics(video['transcript'], client, existing_topics)
+            if topics:
+                # Store and link topics
+                topic_ids = []
+                for topic in topics:
+                    topic_id = db.get_or_create_topic(topic)
+                    topic_ids.append(topic_id)
+                db.link_video_topics(video['id'], topic_ids)
+                log(f"Generated {len(topics)} topics for video")
+            else:
+                log("No topics generated for this video")
+        except Exception as e:
+            log(f"Error processing video {video['id']}: {str(e)}")
+            continue
+    
+    log("Finished regenerating all topics.")
+
 def show_menu():
     """Show the main menu."""
     config = load_config()
@@ -665,7 +730,8 @@ def show_menu():
         print("8. Initialize/Rebuild Database")
         print("9. Load Recent Videos")
         print("10. Reprocess Missing Content")
-        print("11. Exit")
+        print("11. Regenerate All Topics")
+        print("12. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -692,6 +758,8 @@ def show_menu():
         elif choice == "10":
             reprocess_missing_content(config, openai)
         elif choice == "11":
+            regenerate_all_topics(config, openai)
+        elif choice == "12":
             break
         else:
             print("Invalid choice. Please try again.")
