@@ -413,3 +413,8 @@ mark {
 .latest-video-link:hover .summary-preview {
     color: #999;
 }
+
+.navbar-logo {
+    height: 30px;
+    width: auto;
+}
