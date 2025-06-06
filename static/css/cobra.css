@@ -482,3 +482,14 @@ mark {
     border-color: #00ff00;
     box-shadow: 0 0 0 0.25rem rgba(0, 255, 0, 0.25);
 }
+
+.btn-outline-success {
+    --bs-btn-color: #00ff00;
+    --bs-btn-border-color: #00ff00;
+    --bs-btn-hover-color: #00ff00;
+    --bs-btn-hover-bg: #004400;
+    --bs-btn-hover-border-color: #00ff00;
+    --bs-btn-active-color: #00ff00;
+    --bs-btn-active-bg: #004400;
+    --bs-btn-active-border-color: #00ff00;
+}

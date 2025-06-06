@@ -7,9 +7,13 @@
     <div class="row mb-4">
         <div class="col">
             <h2 class="text-center">
-                <a href="/calendar/{{ prev_year }}/{{ prev_month }}" class="btn btn-outline-primary">&laquo;</a>
+                <a href="/calendar/{{ prev_year }}/{{ prev_month }}" class="btn btn-outline-success">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
                 {{ month_name }} {{ year }}
-                <a href="/calendar/{{ next_year }}/{{ next_month }}" class="btn btn-outline-primary">&raquo;</a>
+                <a href="/calendar/{{ next_year }}/{{ next_month }}" class="btn btn-outline-success">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
             </h2>
         </div>
     </div>
