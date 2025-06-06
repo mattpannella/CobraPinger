@@ -228,11 +228,21 @@ class DatabaseManager:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
+            #sanitize the search query
+            safe_query = self._sanitize_fts_query(query)
+            
+            if not safe_query:
+                return {
+                    'results': [],
+                    'total': 0,
+                    'pages': 0
+                }
+            
             cursor.execute("""
                 SELECT COUNT(*)
                 FROM transcript_search
                 WHERE transcript_search MATCH ?
-            """, (query,))
+            """, (safe_query,))
             total_count = cursor.fetchone()[0]
             
             offset = (page - 1) * per_page
@@ -252,13 +262,31 @@ class DatabaseManager:
                 WHERE transcript_search MATCH ?
                 ORDER BY rank
                 LIMIT ? OFFSET ?
-            """, (query, per_page, offset))
+            """, (safe_query, per_page, offset))
             
             return {
                 'results': [dict(row) for row in cursor.fetchall()],
                 'total': total_count,
                 'pages': (total_count + per_page - 1) // per_page
             }
+
+    def _sanitize_fts_query(self, query: str) -> str:
+        """Sanitize FTS query to prevent injection and handle special characters."""
+        if not query:
+            return ""
+            
+        #remove special characters
+        special_chars = ['"', "'", '-', '+', '*', '(', ')', '~', '^', ':', '\\', ';']
+        for char in special_chars:
+            query = query.replace(char, ' ')
+        
+        query = ' '.join(query.split())
+        
+        #escape any remaining special characters
+        query = query.replace('"', '""')
+        
+        #wrap in quotes to treat as phrase
+        return f'"{query}"' if query else ""
 
     def get_topic_id(self, topic_name: str) -> int:
         """Get topic ID from database."""

@@ -344,17 +344,8 @@ mark {
     color: #00cc00;
 }
 
-.cobra-gif {
-    display: flex;
-    align-items: center;
-    height: 100%;
-}
-
 .cobra-gif img {
-    height: 100%;
-    width: auto;
     filter: hue-rotate(120deg);
-    min-height: 300px;
     mix-blend-mode: lighten; /* This will remove the black background */
 }
 
@@ -412,4 +403,9 @@ mark {
 
 .latest-video-link:hover .summary-preview {
     color: #999;
+}
+
+.navbar-logo {
+    height: 30px;
+    width: auto;
 }
