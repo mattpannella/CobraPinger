@@ -245,7 +245,7 @@ mark {
     }
 }
 
-/* Tag Cloud Styles */
+/* Update the tag-cloud styles */
 .tag-cloud {
     display: flex;
     flex-wrap: wrap;
@@ -256,6 +256,8 @@ mark {
     border: 1px solid #2a2a2a;
     padding: 2rem;
     min-height: 200px;
+    position: relative;
+    overflow: hidden;
 }
 
 .tag-item {
@@ -271,6 +273,9 @@ mark {
     align-items: center;
     line-height: 1.2;
     white-space: nowrap;
+    animation: floatAnimation 3s ease-in-out infinite;
+    animation-delay: calc(var(--animation-order) * 0.1s);
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
 .tag-item:hover {
@@ -278,6 +283,38 @@ mark {
     background-color: #008800;
     transform: scale(1.1);
     text-decoration: none;
+    text-shadow: 0 0 15px #00ff00;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
+    z-index: 1;
+}
+
+@keyframes floatAnimation {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Add particle effect background */
+.tag-cloud::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 50%, 
+        rgba(0, 255, 0, 0.1) 0%,
+        rgba(0, 255, 0, 0) 70%);
+    opacity: 0.5;
+    animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
 }
 
 .topic-count {
