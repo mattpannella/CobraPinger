@@ -335,12 +335,13 @@ def inject_user():
 def add_security_headers(response):
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' cdn.jsdelivr.net www.youtube.com; "
-        "style-src 'self' cdn.jsdelivr.net 'unsafe-inline'; "  # Allow inline styles for Bootstrap Icons
-        "font-src 'self' cdn.jsdelivr.net; "  # Allow Bootstrap Icon fonts
-        "img-src 'self' data: i.ytimg.com; "
+        "script-src 'self' cdn.jsdelivr.net www.youtube.com 'unsafe-inline'; "  # Added unsafe-inline for YouTube embed
+        "style-src 'self' cdn.jsdelivr.net 'unsafe-inline'; "
+        "font-src 'self' cdn.jsdelivr.net; "
+        "img-src 'self' data: *.ytimg.com; "  # Changed to allow all ytimg subdomains
         "frame-src www.youtube.com; "
-        "child-src www.youtube.com"
+        "child-src www.youtube.com; "
+        "connect-src 'self'"
     )
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
