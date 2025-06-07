@@ -8,7 +8,7 @@ NC='\033[0m'
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
-    echo "Please run as root (sudo ./setup_web.sh)"
+    echo "Please run as root (sudo ./prod_web.sh)"
     exit 1
 fi
 
