@@ -7,3 +7,4 @@ markdown==3.8
 google-api-python-client==2.171.0
 flask
 feedgen
+flask_wtf

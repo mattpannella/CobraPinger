@@ -2,6 +2,8 @@ import sqlite3
 import os
 import re
 import secrets
+from markupsafe import escape
+
 class DatabaseManager:
     def __init__(self, db_path: str):
         self.db_path = db_path
@@ -659,11 +661,14 @@ class DatabaseManager:
         if not self.can_user_comment(user_id):
             return False
             
+        # Escape HTML in comments
+        safe_content = escape(content)
+        
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT INTO video_comment (user_id, video_id, content) VALUES (?, ?, ?)",
-                (user_id, video_id, content)
+                (user_id, video_id, safe_content)
             )
             conn.commit()
             return True
@@ -683,3 +688,16 @@ class DatabaseManager:
                 ORDER BY c.created_at DESC
             """, (video_id,))
             return [dict(row) for row in cursor.fetchall()]
+
+    def check_login_attempts(self, username: str) -> bool:
+        """Check if user has too many failed login attempts."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM login_attempt 
+                WHERE username = ? 
+                AND datetime(created_at) > datetime('now', '-15 minutes')
+                AND success = 0
+            """, (username,))
+            count = cursor.fetchone()[0]
+            return count < 5  # Allow 5 attempts per 15 minutes

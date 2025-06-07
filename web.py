@@ -3,15 +3,37 @@ from database import DatabaseManager
 from cobrapinger import load_config
 import markdown
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import calendar
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import functools
 from feedgen.feed import FeedGenerator
 from flask import make_response
+from flask_wtf.csrf import CSRFProtect
+import secrets
+
+# Generate a secure random key
+def generate_secret_key():
+    return secrets.token_hex(32)
 
 app = Flask(__name__, static_folder='static')
+
+# Use a hardcoded key for development
+app.secret_key = 'dev-secret-key-1234'  # Change this to any random string
+app.config['WTF_CSRF_SECRET_KEY'] = 'dev-csrf-key-5678'  # Specific key for CSRF
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
+
+# Secure session configuration
+app.config.update(
+    SESSION_COOKIE_SECURE=False,  # Set to False for development without HTTPS
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=60)
+)
+
 config = load_config()
 
 # Add min function to Jinja globals
@@ -299,6 +321,20 @@ def inject_user():
         user = db.get_user_by_id(session['user_id'])
         return dict(user=user)
     return dict()
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' cdn.jsdelivr.net www.youtube.com; "
+        "style-src 'self' cdn.jsdelivr.net; "
+        "img-src 'self' data: i.ytimg.com; "
+        "frame-src www.youtube.com; "  # Allow YouTube iframes
+        "child-src www.youtube.com"    # Additional iframe support for older browsers
+    )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    return response
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9595, debug=True)

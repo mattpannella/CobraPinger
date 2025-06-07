@@ -35,3 +35,10 @@ ON video_comment(video_id);
 
 CREATE INDEX IF NOT EXISTS idx_invite_code_used 
 ON invite_code(used);
+
+CREATE TABLE IF NOT EXISTS login_attempt (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    success BOOLEAN NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

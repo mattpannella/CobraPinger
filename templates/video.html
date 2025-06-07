@@ -78,6 +78,7 @@
                                 {% if session.user_id %}
                                     {% if can_comment %}
                                     <form method="POST" action="{{ url_for('add_comment', video_id=video.id) }}" class="mb-4">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <div class="mb-3">
                                             <label for="comment" class="form-label">Add a comment</label>
                                             <textarea class="form-control" id="comment" name="content" rows="3" required></textarea>
