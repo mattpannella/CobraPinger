@@ -6,11 +6,24 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# Defaults
+WORKERS=3
+
+# Parse command line arguments
+while getopts "w:" opt; do 
+    case $opt in
+        w) WORKERS=$OPTARG ;;
+        \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
+    esac
+done
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
     echo "Please run as root (sudo ./web_prod.sh)"
     exit 1
 fi
+
+echo -e "${YELLOW}Using $WORKERS workers${NC}"
 
 # Get configuration
 read -p "Enter domain name (e.g., cobrapinger.com): " DOMAIN_NAME
@@ -66,13 +79,13 @@ rm -f /etc/nginx/sites-enabled/default
 echo -e "${GREEN}Setting up SSL...${NC}"
 certbot --nginx -d $DOMAIN_NAME --non-interactive --agree-tos --redirect
 
-# Create start script
+# Create start script with dynamic worker count
 cat > "$INSTALL_PATH/start_web.sh" << EOF
 #!/bin/bash
 source $INSTALL_PATH/venv/bin/activate
-echo "Starting CobraPinger Web Server..."
+echo "Starting CobraPinger Web Server with $WORKERS workers..."
 while true; do
-    gunicorn --workers 3 --bind 127.0.0.1:8000 wsgi:app
+    gunicorn --workers $WORKERS --bind 127.0.0.1:8000 wsgi:app
     echo "Server stopped, restarting in 5 seconds..."
     sleep 5
 done

@@ -1,23 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %}Topic Cloud - Cobra DB{% endblock %}
+{% block title %}Topics - Cobra DB{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h2 class="mb-4">Topic Cloud</h2>
-    <div class="tag-cloud p-4">
+    <h2 class="mb-4 text-center">Topics</h2>
+    <div class="tag-cloud p-4" id="tagCloud">
+        <div class="bubble-layer"></div>
         {% for topic in topics %}
             {% set max_count = topics[0]['count'] %}
             {% set min_count = topics[-1]['count'] %}
-            {% set size_range = 2.5 %}  {# Max size difference #}
+            {% set size_range = 2.5 %}
             {% set size = 0.8 + (size_range * (topic['count'] - min_count) / (max_count - min_count)) %}
             <a href="/topic/{{ topic['name'] }}" 
                class="tag-item" 
-               style="font-size: {{ size }}rem;">
+               style="--animation-order: {{ loop.index }}; font-size: {{ size }}rem;"
+               data-count="{{ topic['count'] }}"
+               title="{{ topic['count'] }} videos">
                 {{ topic['name'] }}
                 <span class="topic-count" style="font-size: 0.8rem;">{{ topic['count'] }}</span>
             </a>
         {% endfor %}
     </div>
 </div>
+
 {% endblock %}

@@ -245,17 +245,24 @@ mark {
     }
 }
 
-/* Tag Cloud Styles */
+/* Update the tag-cloud styles */
 .tag-cloud {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
     justify-content: center;
-    background-color: #1a1a1a;
+    background: linear-gradient(
+        to bottom,
+        #1a1a1a,
+        rgba(0, 255, 0, 0.05) 20%,
+        rgba(0, 255, 0, 0.1)
+    );
     border-radius: 8px;
     border: 1px solid #2a2a2a;
     padding: 2rem;
-    min-height: 200px;
+    min-height: 400px;  /* Give more room for bubbles */
+    position: relative;
+    overflow: hidden;
 }
 
 .tag-item {
@@ -271,6 +278,10 @@ mark {
     align-items: center;
     line-height: 1.2;
     white-space: nowrap;
+    animation: floatAnimation 3s ease-in-out infinite;
+    animation-delay: calc(var(--animation-order) * 0.1s);
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    z-index: 2;  /* Above the bubbles */
 }
 
 .tag-item:hover {
@@ -278,6 +289,38 @@ mark {
     background-color: #008800;
     transform: scale(1.1);
     text-decoration: none;
+    text-shadow: 0 0 15px #00ff00;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
+    z-index: 1;
+}
+
+@keyframes floatAnimation {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Add particle effect background */
+.tag-cloud::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 50%, 
+        rgba(0, 255, 0, 0.1) 0%,
+        rgba(0, 255, 0, 0) 70%);
+    opacity: 0.5;
+    animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
 }
 
 .topic-count {
@@ -510,4 +553,109 @@ mark {
 
 .bi-rss-fill:hover {
     color: #00cc00;
+}
+
+
+/* Update tag-cloud for proper layering */
+.tag-cloud {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Create multiple bubble layers */
+.tag-cloud::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: 
+        radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 20% 60%, rgba(255, 255, 255, 0.15) 6px, transparent 8px),
+        radial-gradient(circle at 30% 90%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 60% 85%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 70% 75%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 80% 90%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.15) 3px, transparent 5px);
+    animation: bubbleRise 8s linear infinite;
+    z-index: 1;
+}
+
+/* Add a second bubble layer with different timing */
+.tag-cloud::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: 
+        radial-gradient(circle at 15% 75%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 25% 85%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 35% 65%, rgba(255, 255, 255, 0.15) 6px, transparent 8px),
+        radial-gradient(circle at 45% 85%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 55% 75%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 65% 90%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 75% 70%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 85% 85%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 95% 75%, rgba(255, 255, 255, 0.15) 3px, transparent 5px);
+    animation: bubbleRise 12s linear infinite 2s;
+    z-index: 1;
+}
+
+/* Add a third bubble layer for more density */
+.tag-cloud .bubble-layer {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: 
+        radial-gradient(circle at 5% 85%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 15% 70%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 25% 90%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 35% 80%, rgba(255, 255, 255, 0.15) 6px, transparent 8px),
+        radial-gradient(circle at 45% 65%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 55% 85%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 65% 75%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 75% 90%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 85% 70%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 95% 85%, rgba(255, 255, 255, 0.15) 3px, transparent 5px);
+    animation: bubbleRise 10s linear infinite 4s;
+    z-index: 1;
+}
+
+/* Animation for rising bubbles - faster and more frequent */
+@keyframes bubbleRise {
+    0% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    80% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+/* Update the tag cloud background to be more beer-like */
+.tag-cloud {
+    background: linear-gradient(
+        to bottom,
+        #2a2a1a,
+        rgba(255, 223, 0, 0.05) 20%,
+        rgba(255, 223, 0, 0.1)
+    );
 }

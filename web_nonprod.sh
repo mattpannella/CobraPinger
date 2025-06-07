@@ -12,6 +12,16 @@ PORT=8000
 WORKERS=3
 VENV_PATH="venv"
 
+#parse arguments
+while getopts "w:" opt; do
+  case $opt in
+    w) WORKERS=$OPTARG ;;
+    \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
+  esac
+done
+
+echo -e "${YELLOW}Using $WORKERS workers${NC}"
+
 #create Python virtual environment if it doesn't exist
 if [ ! -d "$VENV_PATH" ]; then
     echo -e "${YELLOW}Creating virtual environment...${NC}"
