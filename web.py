@@ -336,10 +336,11 @@ def add_security_headers(response):
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
         "script-src 'self' cdn.jsdelivr.net www.youtube.com; "
-        "style-src 'self' cdn.jsdelivr.net; "
+        "style-src 'self' cdn.jsdelivr.net 'unsafe-inline'; "  # Allow inline styles for Bootstrap Icons
+        "font-src 'self' cdn.jsdelivr.net; "  # Allow Bootstrap Icon fonts
         "img-src 'self' data: i.ytimg.com; "
-        "frame-src www.youtube.com; "  # Allow YouTube iframes
-        "child-src www.youtube.com"    # Additional iframe support for older browsers
+        "frame-src www.youtube.com; "
+        "child-src www.youtube.com"
     )
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
