@@ -375,9 +375,9 @@ mark {
 }
 
 .video-thumb {
-    height: 300px;
+    max-height: 300px;
     object-fit: cover;
-    width: 533px;
+    max-width: 533px;
     border-radius: 4px;
 }
 
