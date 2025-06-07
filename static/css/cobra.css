@@ -572,11 +572,15 @@ mark {
     height: 100%;
     pointer-events: none;
     background: 
-        radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 2px, transparent 3px),
-        radial-gradient(circle at 50% 70%, rgba(255, 255, 255, 0.1) 3px, transparent 4px),
-        radial-gradient(circle at 80% 90%, rgba(255, 255, 255, 0.1) 2px, transparent 3px),
-        radial-gradient(circle at 30% 85%, rgba(255, 255, 255, 0.1) 4px, transparent 5px),
-        radial-gradient(circle at 70% 75%, rgba(255, 255, 255, 0.1) 3px, transparent 4px);
+        radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 20% 60%, rgba(255, 255, 255, 0.15) 6px, transparent 8px),
+        radial-gradient(circle at 30% 90%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 60% 85%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 70% 75%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 80% 90%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.15) 3px, transparent 5px);
     animation: bubbleRise 8s linear infinite;
     z-index: 1;
 }
@@ -591,29 +595,54 @@ mark {
     height: 100%;
     pointer-events: none;
     background: 
-        radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.1) 2px, transparent 3px),
-        radial-gradient(circle at 60% 85%, rgba(255, 255, 255, 0.1) 3px, transparent 4px),
-        radial-gradient(circle at 25% 80%, rgba(255, 255, 255, 0.1) 4px, transparent 5px),
-        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 2px, transparent 3px),
-        radial-gradient(circle at 85% 90%, rgba(255, 255, 255, 0.1) 3px, transparent 4px);
-    animation: bubbleRise 12s linear infinite;
+        radial-gradient(circle at 15% 75%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 25% 85%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 35% 65%, rgba(255, 255, 255, 0.15) 6px, transparent 8px),
+        radial-gradient(circle at 45% 85%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 55% 75%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 65% 90%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 75% 70%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 85% 85%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 95% 75%, rgba(255, 255, 255, 0.15) 3px, transparent 5px);
+    animation: bubbleRise 12s linear infinite 2s;
     z-index: 1;
 }
 
-/* Animation for rising bubbles */
+/* Add a third bubble layer for more density */
+.tag-cloud .bubble-layer {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: 
+        radial-gradient(circle at 5% 85%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 15% 70%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 25% 90%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 35% 80%, rgba(255, 255, 255, 0.15) 6px, transparent 8px),
+        radial-gradient(circle at 45% 65%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 55% 85%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 65% 75%, rgba(255, 255, 255, 0.15) 3px, transparent 5px),
+        radial-gradient(circle at 75% 90%, rgba(255, 255, 255, 0.15) 4px, transparent 6px),
+        radial-gradient(circle at 85% 70%, rgba(255, 255, 255, 0.15) 5px, transparent 7px),
+        radial-gradient(circle at 95% 85%, rgba(255, 255, 255, 0.15) 3px, transparent 5px);
+    animation: bubbleRise 10s linear infinite 4s;
+    z-index: 1;
+}
+
+/* Animation for rising bubbles - faster and more frequent */
 @keyframes bubbleRise {
     0% {
         transform: translateY(100%);
         opacity: 0;
     }
-    20% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 1;
+    10% {
+        opacity: 0.8;
     }
     80% {
-        opacity: 1;
+        opacity: 0.8;
     }
     100% {
         transform: translateY(-100%);

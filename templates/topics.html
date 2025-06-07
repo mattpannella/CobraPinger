@@ -6,6 +6,7 @@
 <div class="container">
     <h2 class="mb-4 text-center">Topics</h2>
     <div class="tag-cloud p-4" id="tagCloud">
+        <div class="bubble-layer"></div>
         {% for topic in topics %}
             {% set max_count = topics[0]['count'] %}
             {% set min_count = topics[-1]['count'] %}
