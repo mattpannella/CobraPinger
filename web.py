@@ -8,9 +8,10 @@ import calendar
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import functools
+from feedgen.feed import FeedGenerator
+from flask import make_response
 
 app = Flask(__name__, static_folder='static')
-app.secret_key = 'your-secret-key-here'  # Change this to a secure random key
 config = load_config()
 
 # Add min function to Jinja globals
@@ -257,6 +258,39 @@ def add_comment(video_id):
         
     db.add_comment(session['user_id'], video_id, content)
     return redirect(url_for('video_details', video_id=video_id))  # Updated to match route name
+
+@app.route('/feed.xml')
+def rss_feed():
+    """Generate RSS feed of latest videos."""
+    fg = FeedGenerator()
+    fg.title('Cobra DB Video Feed')
+    fg.description('Latest videos from Cobra DB')
+    fg.link(href=request.url_root)
+    fg.language('en')
+    
+    # Get latest videos (maybe last 20)
+    videos = db.get_all_videos(page=1, per_page=20)['videos']
+    
+    for video in videos:
+        fe = fg.add_entry()
+        fe.title(video['title'])
+        fe.link(href=f"{request.url_root}video/{video['id']}")
+        
+        # Build content with video details
+        content = f"""
+        <p>{video['summary'] if video['summary'] else ''}</p>
+        <p>Channel: {video['channel_name']}</p>
+        <p>Posted: {video['youtube_created_at']}</p>
+        """
+        if video['thumbnail_url']:
+            content = f"<img src='{video['thumbnail_url']}' alt='{video['title']}'><br>" + content
+            
+        fe.content(content, type='html')
+        fe.published(datetime.fromisoformat(video['youtube_created_at'].replace('Z', '+00:00')))
+        
+    response = make_response(fg.rss_str())
+    response.headers.set('Content-Type', 'application/rss+xml')
+    return response
 
 @app.context_processor
 def inject_user():

@@ -503,3 +503,11 @@ mark {
 .alert-success hr {
     border-top-color: #00ff00;
 }
+
+.bi-rss-fill {
+    color: #00ff00;
+}
+
+.bi-rss-fill:hover {
+    color: #00cc00;
+}
