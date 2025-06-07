@@ -2,6 +2,7 @@ import sqlite3
 import os
 import re
 import secrets
+import json
 from markupsafe import escape
 
 class DatabaseManager:
@@ -98,6 +99,27 @@ class DatabaseManager:
                 )
             
             conn.commit()
+
+    def store_embedding(self, video_id: int, embedding: list[float]) -> None:
+        """Store embedding vector for a video."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO video_embedding (video_id, embedding) VALUES (?, ?)",
+                (video_id, json.dumps(embedding))
+            )
+            conn.commit()
+
+    def get_embedding(self, video_id: int) -> list[float] | None:
+        """Retrieve embedding vector for a video."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT embedding FROM video_embedding WHERE video_id = ?",
+                (video_id,)
+            )
+            row = cursor.fetchone()
+            return json.loads(row[0]) if row else None
 
     def get_or_create_topic(self, topic_name: str) -> int:
         """Get topic ID from database or create if not exists."""
