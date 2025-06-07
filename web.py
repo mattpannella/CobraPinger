@@ -251,12 +251,21 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
+        # Check if user is allowed to attempt login
+        if not db.check_login_attempts(username):
+            return render_template('login.html', 
+                error='Too many failed attempts. Please try again in 15 minutes.')
+        
         user = db.get_user_by_username(username)
         
         if user and check_password_hash(user['password_hash'], password):
+            # Record successful login
+            db.record_login_attempt(username, True)
             session['user_id'] = user['id']
             return redirect(url_for('index'))
         
+        # Record failed login
+        db.record_login_attempt(username, False)
         return render_template('login.html', error='Invalid username or password')
     
     return render_template('login.html')

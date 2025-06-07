@@ -701,3 +701,13 @@ class DatabaseManager:
             """, (username,))
             count = cursor.fetchone()[0]
             return count < 5  # Allow 5 attempts per 15 minutes
+
+    def record_login_attempt(self, username: str, success: bool) -> None:
+        """Record a login attempt."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO login_attempt (username, success) VALUES (?, ?)",
+                (username, success)
+            )
+            conn.commit()
