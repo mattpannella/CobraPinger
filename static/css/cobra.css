@@ -39,6 +39,23 @@ body {
     border-color: #00ff00;
 }
 
+.btn-link {
+    color: #00ff00;
+    text-decoration: none;
+}
+
+.btn-link:hover {
+    color: #00cc00;
+}
+
+.btn-link.collapsed {
+    color: #00ff00;
+}
+
+.btn-link:not(.collapsed) {
+    color: #00cc00;
+}
+
 .badge {
     background-color: #006600 !important;
 }
@@ -358,9 +375,9 @@ mark {
 }
 
 .video-thumb {
-    height: 300px;
+    max-height: 300px;
     object-fit: cover;
-    width: 533px;
+    max-width: 533px;
     border-radius: 4px;
 }
 
@@ -438,4 +455,59 @@ mark {
 
 .video-card:hover .summary-preview {
     color: #999;
+}
+
+.comment {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 4px;
+}
+
+.comment:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+#commentsSection {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+#comment {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+#comment:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #00ff00;
+    box-shadow: 0 0 0 0.25rem rgba(0, 255, 0, 0.25);
+}
+
+.btn-outline-success {
+    --bs-btn-color: #00ff00;
+    --bs-btn-border-color: #00ff00;
+    --bs-btn-hover-color: #00ff00;
+    --bs-btn-hover-bg: #004400;
+    --bs-btn-hover-border-color: #00ff00;
+    --bs-btn-active-color: #00ff00;
+    --bs-btn-active-bg: #004400;
+    --bs-btn-active-border-color: #00ff00;
+}
+
+.alert-success {
+    background-color: rgba(0, 255, 0, 0.1);
+    border-color: #00ff00;
+    color: #00ff00;
+}
+
+.alert-success hr {
+    border-top-color: #00ff00;
+}
+
+.bi-rss-fill {
+    color: #00ff00;
+}
+
+.bi-rss-fill:hover {
+    color: #00cc00;
 }

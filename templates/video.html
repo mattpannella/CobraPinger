@@ -59,6 +59,61 @@
                     </div>
                 </div>
                 {% endif %}
+
+                <!-- After video summary section -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Comments</h5>
+                            <button class="btn btn-link collapsed" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#commentsSection" 
+                                    aria-expanded="false" 
+                                    aria-controls="commentsSection">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="commentsSection">
+                            <div class="mt-3">
+                                {% if session.user_id %}
+                                    {% if can_comment %}
+                                    <form method="POST" action="{{ url_for('add_comment', video_id=video.id) }}" class="mb-4">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <div class="mb-3">
+                                            <label for="comment" class="form-label">Add a comment</label>
+                                            <textarea class="form-control" id="comment" name="content" rows="3" required></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Submit</button>
+                                    </form>
+                                    {% else %}
+                                    <div class="alert alert-warning mb-4">
+                                        You can only post one comment per 5 min. Please try again later.
+                                    </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="alert alert-info mb-4">
+                                        Please <a href="{{ url_for('login') }}">login</a> to comment.
+                                    </div>
+                                {% endif %}
+
+                                {% if comments %}
+                                    {% for comment in comments %}
+                                    <div class="comment mb-3">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="mb-1">{{ comment.username }}</h6>
+                                            <small class="text-muted">{{ comment.created_at|formatdate }}</small>
+                                        </div>
+                                        <p class="mb-0">{{ comment.content }}</p>
+                                    </div>
+                                    {% if not loop.last %}<hr>{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">No comments yet.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

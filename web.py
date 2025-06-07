@@ -1,11 +1,40 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, get_flashed_messages
 from database import DatabaseManager
+from cobrapinger import load_config
 import markdown
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import calendar
+from werkzeug.security import generate_password_hash, check_password_hash
+import sqlite3
+import functools
+from feedgen.feed import FeedGenerator
+from flask import make_response
+from flask_wtf.csrf import CSRFProtect
+import secrets
+
+# Generate a secure random key
+def generate_secret_key():
+    return secrets.token_hex(32)
 
 app = Flask(__name__, static_folder='static')
+
+# Use a hardcoded key for development
+app.secret_key = 'dev-secret-key-1234'  # Change this to any random string
+app.config['WTF_CSRF_SECRET_KEY'] = 'dev-csrf-key-5678'  # Specific key for CSRF
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
+
+# Secure session configuration
+app.config.update(
+    SESSION_COOKIE_SECURE=False,  # Set to False for development without HTTPS
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=60)
+)
+
+config = load_config()
 
 # Add min function to Jinja globals
 app.jinja_env.globals.update(min=min)
@@ -56,11 +85,18 @@ def videos():
     return render_template('videos.html', active_page='videos', videos=result['videos'], total=result['total'], pages=result['pages'], current_page=page, channels=channels, selected_channels=selected_channels, quote=quote)
 
 @app.route('/video/<int:video_id>')
-def video_detail(video_id):
+def video_details(video_id):  # Changed function name to be more descriptive
     video = db.get_video_details(video_id)
-    if video:
-        return render_template('video.html', video=video)
-    return "Video not found", 404
+    if not video:
+        abort(404)
+    
+    comments = db.get_video_comments(video_id)
+    can_comment = session.get('user_id') and db.can_user_comment(session['user_id'])
+    
+    return render_template('video.html', 
+                         video=video, 
+                         comments=comments,
+                         can_comment=can_comment)
 
 @app.route('/search')
 def search():
@@ -145,6 +181,170 @@ def formatdate(date_str):
         return date.strftime('%B %d, %Y')  # Example: January 1, 2024
     except ValueError:
         return date_str
+
+@app.route('/request-invite', methods=['POST'])
+def request_invite():
+    # Get daily limit from config
+    daily_limit = config.get('daily_invite_limit', 30)
+    
+    success, result = db.generate_invite_code(daily_limit)
+    
+    if success:
+        flash(f'Your invite code is: {result}', 'success')
+    else:
+        flash(result, 'error')
+    
+    return redirect(url_for('register'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        invite_code = request.form['invite_code']
+
+        # Validate invite code
+        if not db.validate_invite_code(invite_code):
+            return render_template('register.html', error='Invalid or used invite code')
+
+        # Basic validation
+        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            return render_template('register.html', error='Username can only contain letters, numbers, and underscores')
+        
+        if len(password) < 8:
+            return render_template('register.html', error='Password must be at least 8 characters')
+
+        try:
+            # Create user
+            password_hash = generate_password_hash(password)
+            user_id = db.create_user(username, email, password_hash)
+            
+            # Mark invite code as used
+            db.mark_invite_code_used(invite_code)
+            
+            # TODO: Set up user session
+            return redirect(url_for('index'))
+        except sqlite3.IntegrityError:
+            return render_template('register.html', error='Username or email already exists')
+        
+    # Get flashed messages for template
+    error = get_flashed_messages(category_filter=['error'])
+    success = get_flashed_messages(category_filter=['success'])
+    
+    return render_template('register.html', 
+                         error=error[0] if error else None,
+                         success=success[0] if success else None)
+
+# Login decorator
+def login_required(f):
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        # Check if user is allowed to attempt login
+        if not db.check_login_attempts(username):
+            return render_template('login.html', 
+                error='Too many failed attempts. Please try again in 15 minutes.')
+        
+        user = db.get_user_by_username(username)
+        
+        if user and check_password_hash(user['password_hash'], password):
+            # Record successful login
+            db.record_login_attempt(username, True)
+            session['user_id'] = user['id']
+            return redirect(url_for('index'))
+        
+        # Record failed login
+        db.record_login_attempt(username, False)
+        return render_template('login.html', error='Invalid username or password')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    return redirect(url_for('index'))
+
+@app.route('/video/<int:video_id>/comment', methods=['POST'])
+@login_required
+def add_comment(video_id):
+    if not db.can_user_comment(session['user_id']):
+        flash('You can only post one comment per 5 min.', 'error')
+        return redirect(url_for('video_details', video_id=video_id))  # Updated to match route name
+        
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Comment cannot be empty.', 'error')
+        return redirect(url_for('video_details', video_id=video_id))  # Updated to match route name
+        
+    db.add_comment(session['user_id'], video_id, content)
+    return redirect(url_for('video_details', video_id=video_id))  # Updated to match route name
+
+@app.route('/feed.xml')
+def rss_feed():
+    """Generate RSS feed of latest videos."""
+    fg = FeedGenerator()
+    fg.title('Cobra DB Video Feed')
+    fg.description('Latest videos from Cobra DB')
+    fg.link(href=request.url_root)
+    fg.language('en')
+    
+    # Get latest videos (maybe last 20)
+    videos = db.get_all_videos(page=1, per_page=20)['videos']
+    
+    for video in videos:
+        fe = fg.add_entry()
+        fe.title(video['title'])
+        fe.link(href=f"{request.url_root}video/{video['id']}")
+        
+        # Build content with video details
+        content = f"""
+        <p>{video['summary'] if video['summary'] else ''}</p>
+        <p>Channel: {video['channel_name']}</p>
+        <p>Posted: {video['youtube_created_at']}</p>
+        """
+        if video['thumbnail_url']:
+            content = f"<img src='{video['thumbnail_url']}' alt='{video['title']}'><br>" + content
+            
+        fe.content(content, type='html')
+        fe.published(datetime.fromisoformat(video['youtube_created_at'].replace('Z', '+00:00')))
+        
+    response = make_response(fg.rss_str())
+    response.headers.set('Content-Type', 'application/rss+xml')
+    return response
+
+@app.context_processor
+def inject_user():
+    """Inject user info into templates."""
+    if 'user_id' in session:
+        user = db.get_user_by_id(session['user_id'])
+        return dict(user=user)
+    return dict()
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' cdn.jsdelivr.net www.youtube.com; "
+        "style-src 'self' cdn.jsdelivr.net 'unsafe-inline'; "  # Allow inline styles for Bootstrap Icons
+        "font-src 'self' cdn.jsdelivr.net; "  # Allow Bootstrap Icon fonts
+        "img-src 'self' data: i.ytimg.com; "
+        "frame-src www.youtube.com; "
+        "child-src www.youtube.com"
+    )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    return response
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9595, debug=True)

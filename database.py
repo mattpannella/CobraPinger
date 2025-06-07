@@ -1,6 +1,8 @@
 import sqlite3
 import os
 import re
+import secrets
+from markupsafe import escape
 
 class DatabaseManager:
     def __init__(self, db_path: str):
@@ -558,3 +560,154 @@ class DatabaseManager:
             cursor.execute("SELECT COUNT(*) FROM topic")
             count = cursor.fetchone()[0]
             return count
+
+    def validate_invite_code(self, code: str) -> bool:
+        """Check if invite code is valid and unused."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id FROM invite_code WHERE code = ? AND used = 0",
+                (code,)
+            )
+            return cursor.fetchone() is not None
+
+    def mark_invite_code_used(self, code: str) -> None:
+        """Mark an invite code as used."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE invite_code SET used = 1 WHERE code = ?",
+                (code,)
+            )
+            conn.commit()
+
+    def create_user(self, username: str, email: str, password_hash: str) -> int:
+        """Create a new user and return their ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO user (username, email, password_hash) VALUES (?, ?, ?)",
+                (username, email, password_hash)
+            )
+            conn.commit()
+            return cursor.lastrowid
+        
+    def can_generate_invite_code(self, daily_limit: int = 30) -> bool:
+        """Check if we can generate more invite codes today."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM invite_code 
+                WHERE date(created_at) = date('now')
+            """)
+            count = cursor.fetchone()[0]
+            return count < daily_limit
+
+    def generate_invite_code(self, daily_limit: int = 30) -> tuple[bool, str]:
+        """Generate a new invite code if within daily limit."""
+        if not self.can_generate_invite_code(daily_limit):
+            return False, "Daily invite code limit reached"
+        
+        code = secrets.token_urlsafe(16)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO invite_code (code) VALUES (?)",
+                (code,)
+            )
+            conn.commit()
+        
+        return True, code
+    
+    def get_user_by_username(self, username: str):
+        """Get user by username."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, username, email, password_hash FROM user WHERE username = ?",
+                (username,)
+            )
+            result = cursor.fetchone()
+            return dict(result) if result else None
+
+    def get_user_by_id(self, user_id: int):
+        """Get user by ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, username, email FROM user WHERE id = ?",
+                (user_id,)
+            )
+            result = cursor.fetchone()
+            return dict(result) if result else None
+
+    def can_user_comment(self, user_id: int) -> bool:
+        """Check if user can comment (5 minute rate limit)."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM video_comment 
+                WHERE user_id = ? 
+                AND datetime(created_at) > datetime('now', '-5 minutes')
+            """, (user_id,))
+            count = cursor.fetchone()[0]
+            return count == 0
+
+    def add_comment(self, user_id: int, video_id: int, content: str) -> bool:
+        """Add a comment if user is within rate limit."""
+        if not self.can_user_comment(user_id):
+            return False
+            
+        # Escape HTML in comments
+        safe_content = escape(content)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO video_comment (user_id, video_id, content) VALUES (?, ?, ?)",
+                (user_id, video_id, safe_content)
+            )
+            conn.commit()
+            return True
+
+    def get_video_comments(self, video_id: int):
+        """Get all comments for a video with user info."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    c.*,
+                    u.username
+                FROM video_comment c
+                JOIN user u ON c.user_id = u.id
+                WHERE c.video_id = ?
+                ORDER BY c.created_at DESC
+            """, (video_id,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def check_login_attempts(self, username: str) -> bool:
+        """Check if user has too many failed login attempts."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM login_attempt 
+                WHERE username = ? 
+                AND datetime(created_at) > datetime('now', '-15 minutes')
+                AND success = 0
+            """, (username,))
+            count = cursor.fetchone()[0]
+            return count < 5  # Allow 5 attempts per 15 minutes
+
+    def record_login_attempt(self, username: str, success: bool) -> None:
+        """Record a login attempt."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO login_attempt (username, success) VALUES (?, ?)",
+                (username, success)
+            )
+            conn.commit()
