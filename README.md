@@ -8,6 +8,12 @@ CobraPinger is a totally dank command line utility for monitoring youtubers you 
 
 That's most definitely what's up!
 
+# Running the web server
+
+- Local Development: `python3 web.py`
+- Run with Gunicorn web server: `./web_nonprod.sh`
+- Production: `./web_prod.sh` (linux only)
+
 # Credits
 
 * Two idiots in a bear costume with a passion for food hacks.
