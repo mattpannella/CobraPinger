@@ -118,6 +118,19 @@ def summarize_text(text, system_prompt, client):
         log(f"Could not summarize text: {e}")
         return None
 
+def generate_embedding(text, client):
+    """Generate embedding vector using OpenAI."""
+    log("Generating embedding for transcript...")
+    try:
+        response = openai.embeddings.create(
+            model="text-embedding-3-small",
+            input=text
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        log(f"Could not generate embedding: {e}")
+        return None
+
 def send_discord_notification(video_url, summary, discord_webhook_url):
     #if there is no Discord webhook URL, just print the message
     if not discord_webhook_url:
@@ -171,7 +184,11 @@ def run_program_once(config, client):
                 if transcript:
                     save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
                     db.store_transcript(db_video_id, transcript)
-                    
+
+                    embedding = generate_embedding(transcript, client)
+                    if embedding:
+                        db.store_embedding(db_video_id, embedding)
+
                     # Extract and store topics
                     topics = extract_topics(transcript, client)
                     topic_ids = []
@@ -480,7 +497,11 @@ def load_recent_videos(config, client):
             if transcript:
                 save_transcript_to_file(transcript, youtuber['name'], video_title, video_published)
                 db.store_transcript(db_video_id, transcript)
-                
+
+                embedding = generate_embedding(transcript, client)
+                if embedding:
+                    db.store_embedding(db_video_id, embedding)
+
                 topics = extract_topics(transcript, client)
                 topic_ids = []
                 for topic in topics:
@@ -537,7 +558,11 @@ def reprocess_missing_transcripts(config, client):
         if transcript:
             save_transcript_to_file(transcript, video['channel_name'], video['title'], video['youtube_created_at'])
             db.store_transcript(video['id'], transcript)
-            
+
+            embedding = generate_embedding(transcript, client)
+            if embedding:
+                db.store_embedding(video['id'], embedding)
+
             # Extract and store topics
             topics = extract_topics(transcript, client)
             topic_ids = []
@@ -595,7 +620,11 @@ def reprocess_missing_content(config, client):
             if transcript:
                 save_transcript_to_file(transcript, video['channel_name'], video['title'], video['youtube_created_at'])
                 db.store_transcript(video['id'], transcript)
-                
+
+                embedding = generate_embedding(transcript, client)
+                if embedding:
+                    db.store_embedding(video['id'], embedding)
+
                 # Extract and store topics
                 topics = extract_topics(transcript, client)
                 topic_ids = []

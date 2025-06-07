@@ -95,5 +95,11 @@ CREATE TABLE IF NOT EXISTS login_attempt (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 );
 
-CREATE INDEX IF NOT EXISTS idx_login_attempt_username_time 
+CREATE TABLE IF NOT EXISTS video_embedding (
+    video_id INTEGER PRIMARY KEY,
+    embedding TEXT NOT NULL,
+    FOREIGN KEY (video_id) REFERENCES video(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempt_username_time
 ON login_attempt(username, created_at);
