@@ -8,3 +8,4 @@ google-api-python-client==2.171.0
 flask
 feedgen
 flask_wtf
+gunicorn
