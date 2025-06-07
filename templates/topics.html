@@ -5,7 +5,9 @@
 {% block content %}
 <div class="container">
     <h2 class="mb-4 text-center">Topic Cloud</h2>
-    <div class="tag-cloud p-4">
+    <div class="tag-cloud p-4" id="tagCloud">
+        <div id="bubbles"></div>
+        
         {% for topic in topics %}
             {% set max_count = topics[0]['count'] %}
             {% set min_count = topics[-1]['count'] %}
@@ -23,28 +25,4 @@
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const tags = document.querySelectorAll('.tag-item');
-    
-    // Add interactive hover effect
-    tags.forEach(tag => {
-        tag.addEventListener('mouseover', function() {
-            tags.forEach(t => {
-                if (t !== tag) {
-                    t.style.opacity = '0.5';
-                    t.style.transform = 'scale(0.95)';
-                }
-            });
-        });
-        
-        tag.addEventListener('mouseout', function() {
-            tags.forEach(t => {
-                t.style.opacity = '1';
-                t.style.transform = 'scale(1)';
-            });
-        });
-    });
-});
-</script>
 {% endblock %}

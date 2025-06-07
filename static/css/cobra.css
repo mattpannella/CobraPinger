@@ -251,11 +251,16 @@ mark {
     flex-wrap: wrap;
     gap: 1rem;
     justify-content: center;
-    background-color: #1a1a1a;
+    background: linear-gradient(
+        to bottom,
+        #1a1a1a,
+        rgba(0, 255, 0, 0.05) 20%,
+        rgba(0, 255, 0, 0.1)
+    );
     border-radius: 8px;
     border: 1px solid #2a2a2a;
     padding: 2rem;
-    min-height: 200px;
+    min-height: 400px;  /* Give more room for bubbles */
     position: relative;
     overflow: hidden;
 }
@@ -276,6 +281,7 @@ mark {
     animation: floatAnimation 3s ease-in-out infinite;
     animation-delay: calc(var(--animation-order) * 0.1s);
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    z-index: 2;  /* Above the bubbles */
 }
 
 .tag-item:hover {
@@ -547,4 +553,16 @@ mark {
 
 .bi-rss-fill:hover {
     color: #00cc00;
+}
+
+
+/* Update tag-cloud for proper layering */
+.tag-cloud {
+    position: relative;
+    overflow: hidden;
+}
+
+.tag-item {
+    position: relative;
+    z-index: 1;
 }
