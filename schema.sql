@@ -27,7 +27,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS transcript_search USING fts5(
     content='transcript',
     content_rowid='id'
 );
-
+DROP TRIGGER IF EXISTS transcript_ai;
 CREATE TRIGGER transcript_ai AFTER INSERT ON transcript BEGIN
   INSERT INTO transcript_search(rowid, content)
   VALUES (new.id, new.content);
@@ -93,7 +93,8 @@ CREATE TABLE IF NOT EXISTS login_attempt (
 );
 
 CREATE TABLE IF NOT EXISTS video_embedding (
-    video_id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
+    video_id INTEGER UNIQUE NOT NULL,
     embedding TEXT NOT NULL,
     FOREIGN KEY (video_id) REFERENCES video(id)
 );

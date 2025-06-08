@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# filepath: /Users/mattpannella/development/python/CobraPinger/apply_schema.py
 
 import sqlite3
 import os
@@ -30,15 +29,6 @@ def apply_schema(db_path, schema_path):
         print(f"Connecting to database: {db_path}")
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
-        # Fix syntax errors in the schema file
-        schema_sql = schema_sql.replace("CREATE TABLE IF NOT EXIST quote", 
-                                      "CREATE TABLE IF NOT EXISTS quote")
-        schema_sql = schema_sql.replace(")",");")
-        
-        # Remove trailing comma in login_attempt table definition
-        schema_sql = schema_sql.replace("created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,", 
-                                      "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP")
         
         # Execute the schema statements
         print("Applying schema...")
