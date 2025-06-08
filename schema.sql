@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS video (
     channel_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     youtube_created_at TEXT NOT NULL,
+    thumbnail_url TEXT DEFAULT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    thumbnail_url TEXT,
     FOREIGN KEY (channel_id) REFERENCES channel(id)
 );
 
@@ -53,23 +53,19 @@ CREATE TABLE IF NOT EXISTS video_topic (
     FOREIGN KEY (topic_id) REFERENCES topic(id)
 );
 
--- Add unique index for video_topic pairs
-CREATE UNIQUE INDEX IF NOT EXISTS idx_video_topic_unique 
-ON video_topic(video_id, topic_id);
-
-CREATE TABLE IF NOT EXIST quote {
+CREATE TABLE IF NOT EXISTS quote (
     id INTEGER PRIMARY KEY,
     video_id INTEGER NOT NULL,
     content TEXT NOT NULL,
     FOREIGN KEY (video_id) REFERENCES video(id)
-}
+);
 
-CREATE TABLE IF NOT EXISTS invite_code {
+CREATE TABLE IF NOT EXISTS invite_code (
     id INTEGER PRIMARY KEY,
     code TEXT UNIQUE NOT NULL,
     used BOOLEAN NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-}
+);
 
 CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY,
@@ -80,6 +76,7 @@ CREATE TABLE IF NOT EXISTS user (
 );
 
 CREATE TABLE IF NOT EXISTS video_comment (
+    id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL,
     video_id INTEGER NOT NULL,
     content TEXT NOT NULL,
@@ -92,7 +89,7 @@ CREATE TABLE IF NOT EXISTS login_attempt (
     id INTEGER PRIMARY KEY,
     username TEXT NOT NULL,
     success BOOLEAN NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS video_embedding (
@@ -103,3 +100,27 @@ CREATE TABLE IF NOT EXISTS video_embedding (
 
 CREATE INDEX IF NOT EXISTS idx_login_attempt_username_time
 ON login_attempt(username, created_at);
+
+CREATE TABLE IF NOT EXISTS advisor (
+    id INTEGER PRIMARY KEY,
+    key TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS advisor_video_note (
+    advisor_id INTEGER NOT NULL,
+    video_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    PRIMARY KEY (advisor_id, video_id),
+    FOREIGN KEY (advisor_id) REFERENCES advisor(id),
+    FOREIGN KEY (video_id) REFERENCES video(id)
+);
+
+INSERT INTO advisor (key, name) VALUES ('clint', 'Clint');
+INSERT INTO advisor (key, name) VALUES ('financial', 'Financial Advisor');
+INSERT INTO advisor (key, name) VALUES ('police', 'Police Advisor');
+INSERT INTO advisor (key, name) VALUES ('health', 'Health Advisor');
+INSERT INTO advisor (key, name) VALUES ('fire', 'Fire Marshall');
+INSERT INTO advisor (key, name) VALUES ('education', 'Education Advisor');
+INSERT INTO advisor (key, name) VALUES ('transit', 'Transit Advisor');
