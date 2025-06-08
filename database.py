@@ -733,3 +733,34 @@ class DatabaseManager:
                 (username, success)
             )
             conn.commit()
+
+    def get_advisor_notes_for_video(self, video_id):
+        """
+        Fetch all advisor notes for a specific video
+        
+        Args:
+            video_id: The ID of the video
+            
+        Returns:
+            List of dictionaries with advisor note information
+        """
+        query = '''
+            SELECT 
+                a.key AS advisor_key, 
+                a.name AS advisor_name, 
+                avn.content
+            FROM 
+                advisor_video_note avn
+            JOIN 
+                advisor a ON avn.advisor_id = a.id
+            WHERE 
+                avn.video_id = ?
+            ORDER BY 
+                a.name
+        '''
+        
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(query, (video_id,))
+            return [dict(row) for row in cursor.fetchall()]

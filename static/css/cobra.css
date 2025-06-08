@@ -659,3 +659,22 @@ mark {
         rgba(255, 223, 0, 0.1)
     );
 }
+
+/* Advisor Notes Styles */
+.advisor-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #dc3545;
+}
+
+.advisor-note {
+    border-left: 3px solid #dc3545;
+    transition: all 0.3s ease;
+}
+
+.advisor-note:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.2);
+}

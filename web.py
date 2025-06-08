@@ -93,10 +93,13 @@ def video_details(video_id):  # Changed function name to be more descriptive
     comments = db.get_video_comments(video_id)
     can_comment = session.get('user_id') and db.can_user_comment(session['user_id'])
     
+    advisor_notes = db.get_advisor_notes_for_video(video_id)
+    
     return render_template('video.html', 
                          video=video, 
                          comments=comments,
-                         can_comment=can_comment)
+                         can_comment=can_comment,
+                         advisor_notes=advisor_notes)
 
 @app.route('/search')
 def search():

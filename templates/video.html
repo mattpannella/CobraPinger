@@ -38,8 +38,53 @@
                 </div>
                 {% endif %}
 
+                <!-- Advisors Section -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-people-fill me-2"></i>Advisors
+                                {% if advisor_notes %}
+                                <span class="badge bg-secondary ms-2">{{ advisor_notes|length }}</span>
+                                {% endif %}
+                            </h5>
+                            <button class="btn btn-link collapsed" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#advisorsCollapse" 
+                                    aria-expanded="false" 
+                                    aria-controls="advisorsCollapse">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="collapse" id="advisorsCollapse">
+                            <div class="mt-3">
+                                {% if advisor_notes %}
+                                    <div class="row">
+                                        {% for note in advisor_notes %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card advisor-note">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <img src="{{ url_for('static', filename='images/advisors/' + note.advisor_key + '.jpg') }}" 
+                                                             alt="{{ note.advisor_name }}" class="advisor-avatar me-3">
+                                                        <h6 class="mb-0">{{ note.advisor_name }}</h6>
+                                                    </div>
+                                                    <p class="card-text">{{ note.content }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">No advisor notes available for this video.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {% if video.transcript %}
-                <div class="card">
+                <div class="card mb-4">  <!-- Added mb-4 class here -->
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">Transcript</h5>
