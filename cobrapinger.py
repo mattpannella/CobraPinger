@@ -1,7 +1,7 @@
 import feedparser
 import time
 import os
-import openai
+from openai import OpenAI
 from youtube_transcript_api import YouTubeTranscriptApi, CouldNotRetrieveTranscript
 from discord_webhook import DiscordWebhook
 import json
@@ -12,6 +12,7 @@ import re
 import traceback
 from database import DatabaseManager
 from googleapiclient.discovery import build
+from models.AdvisorNotes import AdvisorNotes
 
 
 CONFIG_FILE = "config.json"
@@ -79,7 +80,7 @@ def fetch_new_video(rss_feed_url):
     log("No new video found in the RSS feed.")
     return None
 
-def fetch_transcript(video_id, retries=3, delay=2):
+def fetch_transcript(video_id, retries=5, delay=2):
     """Fetch the transcript for the given video ID."""
     log(f"Attempting to fetch the transcript for video ID: {video_id}")
     for attempt in range(1, retries + 1):
@@ -103,7 +104,7 @@ def summarize_text(text, system_prompt, client):
     """Summarize the given text using OpenAI's GPT model."""
     log("Sending transcript to OpenAI for summarization...")
     try:
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -122,7 +123,7 @@ def generate_embedding(text, client):
     """Generate embedding vector using OpenAI."""
     log("Generating embedding for transcript...")
     try:
-        response = openai.embeddings.create(
+        response = client.embeddings.create(
             model="text-embedding-3-small",
             input=text
         )
@@ -147,6 +148,45 @@ def send_discord_notification(video_url, summary, discord_webhook_url):
         log("Notification successfully sent to Discord.")
     else:
         log(f"Failed to send notification to Discord. Status code: {response.status_code}")
+
+def generate_advisor_notes(text: str, client) -> list:
+    log("Generating advisor notes...")
+    
+    try:
+        response = client.beta.chat.completions.parse(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": """You are a collection of advisors from SimCity 2000. Generate advice based on the provided transcript, staying in character for each advisor type.
+                 Only include advisors who have relevant advice to give based on the content.
+                    The transit advisor should suggest "ride bike" for any transportation mentions.
+                    Keep each piece of advice concise and focused on their area of expertise. And 'Clint' is a special advisor. He is the father of KingCobraJFS.
+                    He always calls him Bud and frequently tells him he's doing his best.
+                    
+                    Valid advisor keys are:
+                    - fire
+                    - financial
+                    - police 
+                    - health
+                    - education
+                    - transit
+                    - clint
+                 """},
+                {
+                    "role": "user",
+                    "content": f"""Act as SimCity 2000 advisors and provide relevant advice based on this transcript:
+
+{text}""",
+                },
+            ],
+            response_format=AdvisorNotes,
+        )
+        advisor_notes = response.choices[0].message.parsed
+        log(f"Generated {len(advisor_notes.notes)} advisor notes")
+        return advisor_notes.notes
+        
+    except Exception as e:
+        log(f"Error generating advisor notes: {e}")
+        return []
 
 def run_program_once(config, client):
     """Run the program once."""
@@ -207,6 +247,12 @@ def run_program_once(config, client):
                             summary = "No summary available."
                     else:
                         summary = "OpenAI functionality is disabled for this YouTuber."
+
+                                    # Generate and store advisor notes
+                    advisor_notes = generate_advisor_notes(transcript, client)
+                    if advisor_notes:
+                        db.store_advisor_notes(db_video_id, advisor_notes)
+                        log(f"Stored {len(advisor_notes)} advisor notes")
                 else:
                     summary = "No transcript found."
 
@@ -354,7 +400,7 @@ def extract_topics(text: str, client, existing_topics: list[str] = None) -> list
         # Format existing topics for the prompt
         topics_list = "\n".join(existing_topics) if existing_topics else "No existing topics."
 
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": """You are a topic extraction expert. Extract 3-5 main topics from the given text.
@@ -744,7 +790,7 @@ def regenerate_all_topics(config, client):
 def show_menu():
     """Show the main menu."""
     config = load_config()
-    openai.api_key = config['openai_api_key']
+    client = OpenAI(api_key=config['openai_api_key'])
 
     while True:
         # Display the COBRAPINGER logo each time the menu is shown
@@ -766,9 +812,9 @@ def show_menu():
         choice = input("Enter your choice: ")
 
         if choice == "1":
-            run_program_once(config, openai)
+            run_program_once(config, client)
         elif choice == "2":
-            run_program_continuously(config, openai)
+            run_program_continuously(config, client)
         elif choice == "3":
             list_youtubers(config)
         elif choice == "4":
@@ -785,11 +831,11 @@ def show_menu():
             db.build_schema(config['schema_file_path'])
             log("Database initialized successfully.")
         elif choice == "9":
-            load_recent_videos(config, openai)
+            load_recent_videos(config, client)
         elif choice == "10":
-            reprocess_missing_content(config, openai)
+            reprocess_missing_content(config, client)
         elif choice == "11":
-            regenerate_all_topics(config, openai)
+            regenerate_all_topics(config, client)
         elif choice == "12":
             db = DatabaseManager(config['db_path'])
             log(db.generate_invite_code())
@@ -801,9 +847,8 @@ def show_menu():
 if __name__ == "__main__":
     import sys
     config = load_config()
-    openai.api_key = config['openai_api_key']
-
+    client = OpenAI(api_key=config['openai_api_key'])
     if len(sys.argv) > 1 and sys.argv[1] == "--auto":
-        run_program_continuously(config, openai)
+        run_program_continuously(config, client)
     else:
         show_menu()

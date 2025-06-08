@@ -662,11 +662,8 @@ mark {
 
 /* Advisor Notes Styles */
 .advisor-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+
     object-fit: cover;
-    border: 2px solid #dc3545;
 }
 
 .advisor-note {

@@ -78,17 +78,30 @@ class DatabaseManager:
             conn.commit()
 
     def store_summary(self, video_id: int, content: str) -> None:
-        """Store video summary in database and extract quote if present."""
+        """
+        Store video summary in database and extract quote if present.
+        Skips if a summary already exists for the video.
+        """
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
-            #store summary
+            # Check if summary exists
+            cursor.execute(
+                "SELECT 1 FROM summary WHERE video_id = ?",
+                (video_id,)
+            )
+            
+            if cursor.fetchone():
+                print(f"Summary already exists for video {video_id}, skipping")
+                return
+            
+            # Store new summary
             cursor.execute(
                 "INSERT INTO summary (video_id, content) VALUES (?, ?)",
                 (video_id, content)
             )
             
-            #extract and store quote if present
+            # Extract and store quote if present
             pattern = r'\*\*"([^"]+)"\*\*'
             matches = re.finditer(pattern, content)
             for match in matches:
@@ -737,12 +750,6 @@ class DatabaseManager:
     def get_advisor_notes_for_video(self, video_id):
         """
         Fetch all advisor notes for a specific video
-        
-        Args:
-            video_id: The ID of the video
-            
-        Returns:
-            List of dictionaries with advisor note information
         """
         query = '''
             SELECT 
@@ -764,3 +771,38 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute(query, (video_id,))
             return [dict(row) for row in cursor.fetchall()]
+        
+    def store_advisor_notes(self, video_id: int, notes: list) -> None:
+        """
+        Store advisor notes for a video
+        
+        Args:
+            video_id: The ID of the video
+            notes: List of AdvisorNote objects
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # First delete any existing notes for this video
+                cursor.execute("""
+                    DELETE FROM advisor_video_note 
+                    WHERE video_id = ?
+                """, (video_id,))
+                
+                # Get all advisor IDs
+                cursor.execute("SELECT id, key FROM advisor")
+                advisor_map = {row[1]: row[0] for row in cursor.fetchall()}
+                
+                # Insert new notes
+                for note in notes:
+                    if note.key in advisor_map:
+                        cursor.execute("""
+                            INSERT INTO advisor_video_note (advisor_id, video_id, content)
+                            VALUES (?, ?, ?)
+                        """, (advisor_map[note.key], video_id, note.content))
+                
+                conn.commit()
+                
+        except Exception as e:
+            print(f"Error storing advisor notes: {e}")

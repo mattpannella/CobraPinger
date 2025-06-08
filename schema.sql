@@ -35,7 +35,7 @@ END;
 
 CREATE TABLE IF NOT EXISTS summary (
     id INTEGER PRIMARY KEY,
-    video_id INTEGER NOT NULL,
+    video_id INTEGER UNIQUE NOT NULL,
     content TEXT NOT NULL,
     FOREIGN KEY (video_id) REFERENCES video(id)
 );
