@@ -787,6 +787,43 @@ def regenerate_all_topics(config, client):
     
     log("Finished regenerating all topics.")
 
+def process_missing_advisor_notes(config, client):
+    """Generate advisor notes for videos that don't have them."""
+    db = DatabaseManager(config['db_path'])
+    videos = db.get_videos_without_advisor_notes()
+    
+    if not videos:
+        log("No videos found missing advisor notes.")
+        return
+        
+    log(f"Found {len(videos)} videos missing advisor notes.")
+    process_all = input("Process all videos? (y/n): ").lower() == 'y'
+    
+    for video in videos:
+        if not process_all:
+            process = input(f"\nGenerate advisor notes for '{video['title']}' from {video['channel_name']}? (y/n/all/q): ").lower()
+            if process == 'q':
+                break
+            elif process == 'all':
+                process_all = True
+            elif process != 'y':
+                continue
+                
+        log(f"Generating advisor notes for: {video['title']}")
+        
+        try:
+            advisor_notes = generate_advisor_notes(video['transcript'], client)
+            if advisor_notes:
+                db.store_advisor_notes(video['id'], advisor_notes)
+                log(f"Stored {len(advisor_notes)} advisor notes")
+            else:
+                log("No advisor notes generated")
+        except Exception as e:
+            log(f"Error generating advisor notes: {str(e)}")
+            continue
+            
+    log("Finished processing advisor notes.")
+
 def show_menu():
     """Show the main menu."""
     config = load_config()
@@ -808,7 +845,8 @@ def show_menu():
         print("10. Reprocess Missing Content")
         print("11. Regenerate All Topics")
         print("12. Generate invite code")
-        print("13. Exit")
+        print("13. Generate Missing Advisor Notes")  # Add this line
+        print("14. Exit")  # Update exit number
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -840,6 +878,8 @@ def show_menu():
             db = DatabaseManager(config['db_path'])
             log(db.generate_invite_code())
         elif choice == "13":
+            process_missing_advisor_notes(config, client)
+        elif choice == "14":  # Update exit number
             break
         else:
             print("Invalid choice. Please try again.")

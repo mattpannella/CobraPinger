@@ -806,3 +806,36 @@ class DatabaseManager:
                 
         except Exception as e:
             print(f"Error storing advisor notes: {e}")
+
+    def get_videos_without_advisor_notes(self):
+        """Get all videos that have transcripts but no advisor notes."""
+        query = '''
+            SELECT 
+                v.id,
+                v.youtube_id,
+                v.title,
+                v.youtube_created_at,
+                c.id as channel_id,
+                c.name as channel_name,
+                t.content as transcript
+            FROM 
+                video v
+            JOIN 
+                channel c ON v.channel_id = c.id
+            JOIN 
+                transcript t ON t.video_id = v.id
+            LEFT JOIN 
+                advisor_video_note avn ON avn.video_id = v.id
+            WHERE 
+                avn.video_id IS NULL
+            GROUP BY 
+                v.id
+            ORDER BY 
+                v.youtube_created_at DESC
+        '''
+    
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(query)
+            return [dict(row) for row in cursor.fetchall()]
