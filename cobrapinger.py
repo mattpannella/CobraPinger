@@ -11,11 +11,16 @@ import select
 import re
 import traceback
 from database import DatabaseManager
+import numpy as np
+from embedding_index import load_index, add_embedding, find_similar, build_advisor_prompt
 from googleapiclient.discovery import build
 from models.AdvisorNotes import AdvisorNotes
 
 
 CONFIG_FILE = "config.json"
+
+FAISS_INDEX = None
+FAISS_IDS = []
 
 def sanitize_filename(filename):
     """Sanitize the filename by removing or replacing invalid characters."""
@@ -164,7 +169,7 @@ def send_discord_notification(video_url, summary, discord_webhook_url):
     else:
         log(f"Failed to send notification to Discord. Status code: {response.status_code}")
 
-def generate_advisor_notes(text: str, client, context: str | None = None) -> list:
+def generate_advisor_notes(transcript: str, summaries: list[str], client, context: str | None = None) -> list:
     log("Generating advisor notes...")
 
     try:
@@ -187,11 +192,10 @@ def generate_advisor_notes(text: str, client, context: str | None = None) -> lis
         ]
         if context:
             messages.append({"role": "system", "content": context})
+        prompt = build_advisor_prompt(transcript, summaries)
         messages.append({
             "role": "user",
-            "content": f"""Act as SimCity 2000 advisors and provide relevant advice based on this transcript:
-
-{text}""",
+            "content": prompt,
         })
         response = client.beta.chat.completions.parse(
             model="gpt-4o-mini",
@@ -244,9 +248,15 @@ def run_program_once(config, client):
                     db.store_transcript(db_video_id, transcript)
 
                     embedding = generate_embedding(transcript, client)
+                    summaries_for_prompt = []
                     if embedding:
                         db.store_embedding(db_video_id, embedding)
-
+                        global FAISS_INDEX, FAISS_IDS
+                        FAISS_INDEX = add_embedding(FAISS_INDEX, FAISS_IDS, db_video_id, embedding)
+                        similar = find_similar(FAISS_INDEX, FAISS_IDS, embedding)
+                        similar_ids = [sid for sid, _ in similar]
+                        summaries_for_prompt = db.get_summaries_for_videos(similar_ids)
+                    
                     # Extract and store topics
                     topics = extract_topics(transcript, client)
                     topic_ids = []
@@ -267,7 +277,7 @@ def run_program_once(config, client):
                         summary = "OpenAI functionality is disabled for this YouTuber."
 
                                     # Generate and store advisor notes
-                    advisor_notes = generate_advisor_notes(transcript, client)
+                    advisor_notes = generate_advisor_notes(transcript, summaries_for_prompt, client)
                     if advisor_notes:
                         db.store_advisor_notes(db_video_id, advisor_notes)
                         log(f"Stored {len(advisor_notes)} advisor notes")
@@ -569,8 +579,14 @@ def load_recent_videos(config, client):
                 db.store_transcript(db_video_id, transcript)
 
                 embedding = generate_embedding(transcript, client)
+                summaries_for_prompt = []
                 if embedding:
                     db.store_embedding(db_video_id, embedding)
+                    global FAISS_INDEX, FAISS_IDS
+                    FAISS_INDEX = add_embedding(FAISS_INDEX, FAISS_IDS, db_video_id, embedding)
+                    similar = find_similar(FAISS_INDEX, FAISS_IDS, embedding)
+                    similar_ids = [sid for sid, _ in similar]
+                    summaries_for_prompt = db.get_summaries_for_videos(similar_ids)
 
                 topics = extract_topics(transcript, client)
                 topic_ids = []
@@ -632,6 +648,8 @@ def reprocess_missing_transcripts(config, client):
             embedding = generate_embedding(transcript, client)
             if embedding:
                 db.store_embedding(video['id'], embedding)
+                global FAISS_INDEX, FAISS_IDS
+                FAISS_INDEX = add_embedding(FAISS_INDEX, FAISS_IDS, video['id'], embedding)
 
             # Extract and store topics
             topics = extract_topics(transcript, client)
@@ -694,6 +712,8 @@ def reprocess_missing_content(config, client):
                 embedding = generate_embedding(transcript, client)
                 if embedding:
                     db.store_embedding(video['id'], embedding)
+                    global FAISS_INDEX, FAISS_IDS
+                    FAISS_INDEX = add_embedding(FAISS_INDEX, FAISS_IDS, video['id'], embedding)
 
                 # Extract and store topics
                 topics = extract_topics(transcript, client)
@@ -836,7 +856,21 @@ def process_missing_advisor_notes(config, client):
         log(f"Generating advisor notes for: {video['title']}")
         
         try:
-            advisor_notes = generate_advisor_notes(video['transcript'], client)
+            embedding = db.get_embedding(video['id'])
+            summaries_for_prompt = []
+            if not embedding:
+                embedding = generate_embedding(video['transcript'], client)
+                if embedding:
+                    db.store_embedding(video['id'], embedding)
+            if embedding:
+                global FAISS_INDEX, FAISS_IDS
+                if video['id'] not in FAISS_IDS:
+                    FAISS_INDEX = add_embedding(FAISS_INDEX, FAISS_IDS, video['id'], embedding)
+                similar = find_similar(FAISS_INDEX, FAISS_IDS, embedding)
+                similar_ids = [sid for sid, _ in similar]
+                summaries_for_prompt = db.get_summaries_for_videos(similar_ids)
+
+            advisor_notes = generate_advisor_notes(video['transcript'], summaries_for_prompt, client)
             if advisor_notes:
                 db.store_advisor_notes(video['id'], advisor_notes)
                 log(f"Stored {len(advisor_notes)} advisor notes")
@@ -937,6 +971,8 @@ if __name__ == "__main__":
     import sys
     config = load_config()
     client = OpenAI(api_key=config['openai_api_key'])
+    db = DatabaseManager(config['db_path'])
+    FAISS_INDEX, FAISS_IDS = load_index(db)
     if len(sys.argv) > 1 and sys.argv[1] == "--auto":
         run_program_continuously(config, client)
     else:

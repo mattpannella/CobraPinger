@@ -15,6 +15,14 @@ That's most definitely what's up!
 - Run with Gunicorn web server: `./web_nonprod.sh`
 - Production: `./web_prod.sh` (linux only)
 
+## FAISS Embedding Index
+
+On startup CobraPinger loads all video embeddings from SQLite into an in-memory
+FAISS index. This powers retrieval augmented generation for the Council of
+Advisors feature. New embeddings are appended to the index whenever a video is
+processed. If the index ever gets out of sync you can rebuild it by restarting
+the application or choosing the database rebuild option from the menu.
+
 # Credits
 
 * Two idiots in a bear costume with a passion for food hacks.
