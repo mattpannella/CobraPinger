@@ -1038,8 +1038,14 @@ def load_archived_videos(config, client):
                 db.store_transcript(db_video_id, transcript)
 
                 embedding = generate_embedding(transcript, client)
+                summaries_for_prompt = []
                 if embedding:
                     db.store_embedding(db_video_id, embedding)
+                    global FAISS_INDEX, FAISS_IDS
+                    FAISS_INDEX = add_embedding(FAISS_INDEX, FAISS_IDS, db_video_id, embedding)
+                    similar = find_similar(FAISS_INDEX, FAISS_IDS, embedding)
+                    similar_ids = [sid for sid, _ in similar]
+                    summaries_for_prompt = db.get_summaries_for_videos(similar_ids)
 
                 topics = extract_topics(transcript, client)
                 topic_ids = []
@@ -1055,7 +1061,7 @@ def load_archived_videos(config, client):
                     log("Summary stored.")
 
                 # Add advisor notes generation
-                advisor_notes = generate_advisor_notes(transcript, client)
+                advisor_notes = generate_advisor_notes(transcript, summaries_for_prompt, client)
                 if advisor_notes:
                     db.store_advisor_notes(db_video_id, advisor_notes)
                     log(f"Stored {len(advisor_notes)} advisor notes")
