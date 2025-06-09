@@ -1,19 +1,18 @@
-#!/bin/bash
+!/bin/bash
 
-# Path to your script (adjust as needed)
-SCRIPT_PATH="/cobra/cobrapingerTEST.py"
+# Start CobraPinger in continuous mode and launch the web interface.
 
-# Log file just for restarts
-LOG_FILE="/cobra/cobrapinger_restart.log"
+PINGER_SCRIPT="cobrapinger.py"
+WEB_SCRIPT="./web_nonprod.sh"
 
-# Delay before restart (seconds)
-RESTART_DELAY=5
+# Start the pinger
+python3 "$PINGER_SCRIPT" --auto &
+PINGER_PID=$!
 
-echo "Starting COBRAPINGER in auto mode..."
+# Start the web application
+"$WEB_SCRIPT" &
+WEB_PID=$!
 
-while true
-do
-    echo "[$(date)] COBRAPINGER starting..." >> "$LOG_FILE"
-    
-    # Run Python script and show output live in terminal
-    python3 "$SCRIPT_PATH" --auto
+trap "kill $PINGER_PID $WEB_PID" SIGINT SIGTERM
+
+wait $PINGER_PID $WEB_PID
