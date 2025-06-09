@@ -939,6 +939,140 @@ def ask_question(config, client):
     except Exception as e:
         log(f"Error generating answer: {e}")
 
+def ask_question(config, client):
+    """Allow the user to ask a question about the video library."""
+    db = DatabaseManager(config['db_path'])
+    question = input("Enter your question: ")
+    context = retrieve_context(question, db, client)
+    try:
+        messages = [
+            {"role": "system", "content": "You answer questions about the stored YouTube videos."},
+        ]
+        if context:
+            messages.append({"role": "system", "content": context})
+        messages.append({"role": "user", "content": question})
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            max_tokens=500,
+            temperature=0.5,
+        )
+        print(response.choices[0].message.content.strip())
+    except Exception as e:
+        log(f"Error generating answer: {e}")
+
+def load_archived_videos(config, client):
+    """Load archived videos with custom date parsing from titles."""
+    if not config.get('youtube_api_key'):
+        log("YouTube API key not configured. Please add it in the API keys menu.")
+        return
+
+    channel_id = input("Enter the YouTube channel ID for the archive: ")
+    if not channel_id:
+        log("No channel ID provided.")
+        return
+
+    num_videos = int(input("How many videos to process? "))
+    if num_videos <= 0:
+        log("Invalid number of videos.")
+        return
+
+    log(f"Loading {num_videos} archived videos for channel {channel_id}...")
+    
+    def parse_date_from_title(title):
+        """Extract date from video title or return default date."""
+        # Look for date pattern YYYY-MM-DD at the end of the title
+        match = re.search(r'(\d{4}-\d{1,2}-\d{1,2})$', title)
+        if match:
+            date_str = match.group(1)
+            # Handle the special case of 2012-0-0
+            if date_str == '2012-0-0':
+                return '2012-01-01'
+            try:
+                # Parse and reformat the date to ensure consistent formatting
+                parsed_date = time.strptime(date_str, '%Y-%m-%d')
+                return time.strftime('%Y-%m-%d', parsed_date)
+            except ValueError:
+                return '2012-01-01'
+        return '2012-01-01'  # Default date for videos without dates
+
+    try:
+        videos = fetch_videos_from_channel(config['youtube_api_key'], channel_id, num_videos)
+        if not videos:
+            log("No videos found or error occurred.")
+            return
+            
+        db = DatabaseManager(config['db_path'])
+        channel_name = input("Enter channel name: ")
+        db_channel_id = db.get_or_create_channel(channel_id, channel_name)
+        
+        videos_processed = 0
+        for video in videos:
+            if videos_processed >= num_videos:
+                break
+                
+            if db.video_exists(video['id']):
+                log(f"Video {video['id']} already exists in database, skipping...")
+                continue
+            
+            video_id = video['id']
+            video_title = video['title']
+            # Parse the date from the video title
+            video_date = parse_date_from_title(video_title)
+            thumbnail_url = video['thumbnail_url']
+
+            log(f"Processing video: {video_title}")
+            log(f"Using date: {video_date}")
+            
+            db_video_id = db.store_video(
+                video_id, 
+                db_channel_id, 
+                video_title, 
+                video_date,
+                thumbnail_url=thumbnail_url
+            )
+            
+            transcript = fetch_transcript(video_id)
+            if transcript:
+                save_transcript_to_file(transcript, channel_name, video_title, video_date)
+                db.store_transcript(db_video_id, transcript)
+
+                embedding = generate_embedding(transcript, client)
+                if embedding:
+                    db.store_embedding(db_video_id, embedding)
+
+                topics = extract_topics(transcript, client)
+                topic_ids = []
+                for topic in topics:
+                    topic_id = db.get_or_create_topic(topic)
+                    topic_ids.append(topic_id)
+                db.link_video_topics(db_video_id, topic_ids)
+                log(f"Stored {len(topics)} topics for video")
+
+                summary = summarize_text(transcript, "You are a helpful assistant that summarizes YouTube video transcripts of the gothic bad boy YouTuber KingCobraJFS. You are an expert on the lore of Cobra and summarize the transcripts of his YouTube videos. Give a brief summary in a normal tone of voice plainly stating the events of the video. Include a bulleted list of summarized points and highlights, and end with the most hilarious direct quote bolded. Keep your entire summary under 1800 characters.", client)
+                if summary:
+                    db.store_summary(db_video_id, summary)
+                    log("Summary stored.")
+
+                # Add advisor notes generation
+                advisor_notes = generate_advisor_notes(transcript, client)
+                if advisor_notes:
+                    db.store_advisor_notes(db_video_id, advisor_notes)
+                    log(f"Stored {len(advisor_notes)} advisor notes")
+                
+            else:
+                log("No transcript available for this video.")
+            
+            videos_processed += 1
+
+        log(f"Finished loading archived videos for channel {channel_name}")
+        
+    except ValueError:
+        log("Invalid input. Please enter a number.")
+    except Exception as e:
+        log(f"An error occurred: {str(e)}")
+        traceback.print_exc()
+
 def show_menu():
     """Show the main menu."""
     config = load_config()
@@ -963,7 +1097,8 @@ def show_menu():
         print("13. Generate Missing Advisor Notes")
         print("14. Backfill Missing Embeddings")
         print("15. Ask a Question")
-        print("16. Exit")
+        print("16. Load Archived Videos")
+        print("17. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -1001,6 +1136,8 @@ def show_menu():
         elif choice == "15":
             ask_question(config, client)
         elif choice == "16":
+            load_archived_videos(config, client)
+        elif choice == "17":
             break
         else:
             print("Invalid choice. Please try again.")
