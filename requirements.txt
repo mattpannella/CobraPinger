@@ -9,3 +9,4 @@ flask
 feedgen
 flask_wtf
 gunicorn
+faiss-cpu
