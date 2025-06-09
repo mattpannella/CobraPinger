@@ -100,16 +100,17 @@ def fetch_transcript(video_id, retries=5, delay=2):
     print(f"Failed to fetch transcript for video {video_id} after {retries} attempts.")
     return None
 
-def summarize_text(text, system_prompt, client):
+def summarize_text(text, system_prompt, client, context: str | None = None):
     """Summarize the given text using OpenAI's GPT model."""
     log("Sending transcript to OpenAI for summarization...")
     try:
+        messages = [{"role": "system", "content": system_prompt}]
+        if context:
+            messages.append({"role": "system", "content": context})
+        messages.append({"role": "user", "content": f"Summarize the following YouTube transcript:\n\n{text}"})
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Summarize the following YouTube transcript:\n\n{text}"}
-            ],
+            messages=messages,
             max_tokens=1500,
             temperature=0.5,
         )
@@ -132,6 +133,20 @@ def generate_embedding(text, client):
         log(f"Could not generate embedding: {e}")
         return None
 
+def retrieve_context(query_text: str, db: DatabaseManager, client, top_n: int = 5) -> str:
+    """Retrieve relevant context from the database for a query."""
+    embedding = generate_embedding(query_text, client)
+    if embedding is None:
+        return ""
+    results = db.search_by_embedding(embedding, top_n)
+    snippets = []
+    for video in results:
+        if video.get("transcript"):
+            snippets.append(video["transcript"])
+        elif video.get("summary"):
+            snippets.append(video["summary"])
+    return "\n".join(snippets)
+
 def send_discord_notification(video_url, summary, discord_webhook_url):
     #if there is no Discord webhook URL, just print the message
     if not discord_webhook_url:
@@ -149,35 +164,38 @@ def send_discord_notification(video_url, summary, discord_webhook_url):
     else:
         log(f"Failed to send notification to Discord. Status code: {response.status_code}")
 
-def generate_advisor_notes(text: str, client) -> list:
+def generate_advisor_notes(text: str, client, context: str | None = None) -> list:
     log("Generating advisor notes...")
-    
+
     try:
-        response = client.beta.chat.completions.parse(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": """You are a collection of advisors from SimCity 2000. Generate advice based on the provided transcript, staying in character for each advisor type.
+        messages = [
+            {"role": "system", "content": """You are a collection of advisors from SimCity 2000. Generate advice based on the provided transcript, staying in character for each advisor type.
                  Only include advisors who have relevant advice to give based on the content.
                     The transit advisor should suggest "ride bike" for any transportation mentions.
                     Keep each piece of advice concise and focused on their area of expertise. And 'Clint' is a special advisor. He is the father of KingCobraJFS.
                     He always calls him Bud and frequently tells him he's doing his best.
-                    
+
                     Valid advisor keys are:
                     - fire
                     - financial
-                    - police 
+                    - police
                     - health
                     - education
                     - transit
                     - clint
-                 """},
-                {
-                    "role": "user",
-                    "content": f"""Act as SimCity 2000 advisors and provide relevant advice based on this transcript:
+                 """}
+        ]
+        if context:
+            messages.append({"role": "system", "content": context})
+        messages.append({
+            "role": "user",
+            "content": f"""Act as SimCity 2000 advisors and provide relevant advice based on this transcript:
 
 {text}""",
-                },
-            ],
+        })
+        response = client.beta.chat.completions.parse(
+            model="gpt-4o-mini",
+            messages=messages,
             response_format=AdvisorNotes,
         )
         advisor_notes = response.choices[0].message.parsed
@@ -393,36 +411,39 @@ def display_logo():
     ascii_art = pyfiglet.figlet_format("COBRAPINGER", font="slant")
     print(ascii_art)
 
-def extract_topics(text: str, client, existing_topics: list[str] = None) -> list[str]:
+def extract_topics(text: str, client, existing_topics: list[str] = None, context: str | None = None) -> list[str]:
     """Extract topics from text using OpenAI."""
     log("Sending transcript to OpenAI to generate topics list")
     try:
         # Format existing topics for the prompt
         topics_list = "\n".join(existing_topics) if existing_topics else "No existing topics."
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": """You are a topic extraction expert. Extract 3-5 main topics from the given text.
+        messages = [
+            {"role": "system", "content": """You are a topic extraction expert. Extract 3-5 main topics from the given text.
                 If a topic is similar to one in the existing topics list, use the existing topic name instead of creating a new one.
                 Only create new topics if they represent significantly different concepts.
-                
+
                 Each topic should be a single word when possible, maximum 2-3 words only when absolutely necessary.
                 Respond with only the topics, one per line, no numbers or bullet points.
-                 
+
                 Be sure to consolidate with the existing topics list. Drink combos and drink combinations shouldn't both exist, for exxample.
                 
                 Example:
                 If "cooking" exists in the topics list, use that instead of creating "food preparation" or "recipe making".
                 If "beer" exists, use that instead of creating "beer tasting" or "craft beer"."""},
-                {"role": "user", "content": f"""Here are the existing topics to choose from when possible:
+        ]
+        if context:
+            messages.append({"role": "system", "content": context})
+        messages.append({"role": "user", "content": f"""Here are the existing topics to choose from when possible:
 
 {topics_list}
 
 Extract the main topics from this transcript, from a video made by the youtuber KingCobraJFS:
 
-{text}"""}
-            ],
+{text}"""})
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
             max_tokens=100,
             temperature=0.3,
         )
@@ -824,6 +845,28 @@ def process_missing_advisor_notes(config, client):
             
     log("Finished processing advisor notes.")
 
+def ask_question(config, client):
+    """Allow the user to ask a question about the video library."""
+    db = DatabaseManager(config['db_path'])
+    question = input("Enter your question: ")
+    context = retrieve_context(question, db, client)
+    try:
+        messages = [
+            {"role": "system", "content": "You answer questions about the stored YouTube videos."},
+        ]
+        if context:
+            messages.append({"role": "system", "content": context})
+        messages.append({"role": "user", "content": question})
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            max_tokens=500,
+            temperature=0.5,
+        )
+        print(response.choices[0].message.content.strip())
+    except Exception as e:
+        log(f"Error generating answer: {e}")
+
 def show_menu():
     """Show the main menu."""
     config = load_config()
@@ -846,7 +889,8 @@ def show_menu():
         print("11. Regenerate All Topics")
         print("12. Generate invite code")
         print("13. Generate Missing Advisor Notes")  # Add this line
-        print("14. Exit")  # Update exit number
+        print("14. Ask a Question")
+        print("15. Exit")  # Update exit number
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -879,7 +923,9 @@ def show_menu():
             log(db.generate_invite_code())
         elif choice == "13":
             process_missing_advisor_notes(config, client)
-        elif choice == "14":  # Update exit number
+        elif choice == "14":
+            ask_question(config, client)
+        elif choice == "15":  # Update exit number
             break
         else:
             print("Invalid choice. Please try again.")

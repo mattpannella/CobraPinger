@@ -3,6 +3,7 @@ import os
 import re
 import secrets
 import json
+import math
 from markupsafe import escape
 
 class DatabaseManager:
@@ -133,6 +134,40 @@ class DatabaseManager:
             )
             row = cursor.fetchone()
             return json.loads(row[0]) if row else None
+
+    def search_by_embedding(self, embedding: list[float], top_n: int = 5) -> list[dict]:
+        """Return videos most similar to the given embedding."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT v.id, v.title, t.content AS transcript, s.content AS summary, ve.embedding
+                FROM video v
+                JOIN video_embedding ve ON v.id = ve.video_id
+                LEFT JOIN transcript t ON v.id = t.video_id
+                LEFT JOIN summary s ON v.id = s.video_id
+                """
+            )
+            rows = cursor.fetchall()
+
+        def cosine_similarity(a, b):
+            dot = sum(x*y for x, y in zip(a, b))
+            norm_a = math.sqrt(sum(x*x for x in a))
+            norm_b = math.sqrt(sum(y*y for y in b))
+            if norm_a == 0 or norm_b == 0:
+                return 0.0
+            return dot / (norm_a * norm_b)
+
+        scored = []
+        for row in rows:
+            ve = json.loads(row["embedding"])
+            score = cosine_similarity(embedding, ve)
+            data = dict(row)
+            scored.append((score, data))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [item[1] for item in scored[:top_n]]
 
     def get_or_create_topic(self, topic_name: str) -> int:
         """Get topic ID from database or create if not exists."""
