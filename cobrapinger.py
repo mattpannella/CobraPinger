@@ -298,8 +298,11 @@ def run_program_continuously(config, client):
         for _ in range(60):
             time.sleep(1)
             # Check if the user has pressed Enter to break the loop
-            if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-                user_input = input()
+            if sys.stdin.isatty() and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                try:
+                    user_input = input()
+                except EOFError:
+                    return  # Exit if stdin closes unexpectedly
                 if user_input == "":
                     return  # Exit the loop and return to the main menu
                 
