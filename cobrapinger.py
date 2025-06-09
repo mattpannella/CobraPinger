@@ -882,6 +882,41 @@ def process_missing_advisor_notes(config, client):
             
     log("Finished processing advisor notes.")
 
+def backfill_missing_embeddings(config, client):
+    """Generate embeddings for transcripts that lack them."""
+    db = DatabaseManager(config['db_path'])
+    videos = db.get_videos_without_embedding()
+
+    if not videos:
+        log("No videos found missing embeddings.")
+        return
+
+    log(f"Found {len(videos)} videos missing embeddings.")
+    process_all = input("Process all videos? (y/n): ").lower() == 'y'
+
+    for video in videos:
+        if not process_all:
+            choice = input(
+                f"\nGenerate embedding for '{video['title']}' from {video['channel_name']}? (y/n/all/q): "
+            ).lower()
+            if choice == 'q':
+                break
+            elif choice == 'all':
+                process_all = True
+            elif choice != 'y':
+                continue
+
+        log(f"Generating embedding for: {video['title']}")
+
+        embedding = generate_embedding(video['transcript'], client)
+        if embedding:
+            db.store_embedding(video['id'], embedding)
+            global FAISS_INDEX, FAISS_IDS
+            FAISS_INDEX = add_embedding(FAISS_INDEX, FAISS_IDS, video['id'], embedding)
+            log("Embedding stored.")
+        else:
+            log("Failed to generate embedding.")
+
 def ask_question(config, client):
     """Allow the user to ask a question about the video library."""
     db = DatabaseManager(config['db_path'])
@@ -925,9 +960,10 @@ def show_menu():
         print("10. Reprocess Missing Content")
         print("11. Regenerate All Topics")
         print("12. Generate invite code")
-        print("13. Generate Missing Advisor Notes")  # Add this line
-        print("14. Ask a Question")
-        print("15. Exit")  # Update exit number
+        print("13. Generate Missing Advisor Notes")
+        print("14. Backfill Missing Embeddings")
+        print("15. Ask a Question")
+        print("16. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -961,8 +997,10 @@ def show_menu():
         elif choice == "13":
             process_missing_advisor_notes(config, client)
         elif choice == "14":
+            backfill_missing_embeddings(config, client)
+        elif choice == "15":
             ask_question(config, client)
-        elif choice == "15":  # Update exit number
+        elif choice == "16":
             break
         else:
             print("Invalid choice. Please try again.")

@@ -510,6 +510,28 @@ class DatabaseManager:
             """)
             return [dict(row) for row in cursor.fetchall()]
 
+    def get_videos_without_embedding(self) -> list:
+        """Get videos that have transcripts but no embedding vector."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    v.id,
+                    v.youtube_id,
+                    v.title,
+                    c.name as channel_name,
+                    t.content as transcript
+                FROM video v
+                JOIN channel c ON v.channel_id = c.id
+                JOIN transcript t ON v.id = t.video_id
+                LEFT JOIN video_embedding ve ON v.id = ve.video_id
+                WHERE ve.video_id IS NULL
+                """
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
     def get_topic_counts(self):
         """Get all topics and their video counts."""
         with sqlite3.connect(self.db_path) as conn:
