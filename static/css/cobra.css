@@ -662,7 +662,6 @@ mark {
 
 /* Advisor Notes Styles */
 .advisor-avatar {
-
     object-fit: cover;
 }
 
@@ -672,8 +671,7 @@ mark {
 }
 
 .advisor-note:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.2);
+    border-left: 3px solid #dc3545;
 }
 
 /* Remove these previous overrides */
