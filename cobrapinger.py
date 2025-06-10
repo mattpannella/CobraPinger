@@ -15,6 +15,7 @@ import numpy as np
 from embedding_index import load_index, add_embedding, find_similar, build_advisor_prompt
 from googleapiclient.discovery import build
 from models.AdvisorNotes import AdvisorNotes
+from summaries import WhisperTranscriber
 
 
 CONFIG_FILE = "config.json"
@@ -85,7 +86,7 @@ def fetch_new_video(rss_feed_url):
     log("No new video found in the RSS feed.")
     return None
 
-def fetch_transcript(video_id, retries=5, delay=2):
+def fetch_transcript(video_id, retries=3, delay=2):
     """Fetch the transcript for the given video ID."""
     log(f"Attempting to fetch the transcript for video ID: {video_id}")
     for attempt in range(1, retries + 1):
@@ -101,6 +102,14 @@ def fetch_transcript(video_id, retries=5, delay=2):
         
         if attempt < retries:
             time.sleep(delay)
+
+    try:
+        transcriber = WhisperTranscriber(model_size="base")
+        transcript = transcriber.transcribe_youtube(video_id)
+        log("Transcript successfully generated.")
+        return transcript
+    except Exception as e:
+        log(f"Failed to fetch transcript using Whisper: {e}")
 
     print(f"Failed to fetch transcript for video {video_id} after {retries} attempts.")
     return None
