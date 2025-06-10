@@ -10,3 +10,5 @@ feedgen
 flask_wtf
 gunicorn
 faiss-cpu
+yt-dlp
+openai-whisper
