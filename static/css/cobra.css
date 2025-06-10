@@ -675,3 +675,33 @@ mark {
     transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(220, 53, 69, 0.2);
 }
+
+/* Remove these previous overrides */
+.video-details-card:hover {
+    border-color: #2a2a2a !important;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+.video-details-card .card:hover {
+    border-color: #2a2a2a !important;
+    box-shadow: none !important;
+}
+
+/* Add these new more specific styles instead */
+.video-details-card > .card:hover {
+    border-color: #2a2a2a !important;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Preserve hover effects for nested cards */
+.video-details-card .card-body .card:hover {
+    border-color: #00ff00 !important;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.2) !important;
+}
+
+/* Preserve cursor pointer for clickable elements */
+.video-details-card [role="button"],
+.video-details-card .btn,
+.video-details-card a {
+    cursor: pointer;
+}
