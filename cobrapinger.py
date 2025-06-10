@@ -106,7 +106,8 @@ def fetch_transcript(video_id, retries=3, delay=2):
     try:
         transcriber = WhisperTranscriber(model_size="base")
         transcript = transcriber.transcribe_youtube(video_id)
-        log(transcript)
+        log("Transcript successfully generated.")
+        return transcript
     except Exception as e:
         log(f"Failed to fetch transcript using Whisper: {e}")
 
